@@ -30,6 +30,8 @@ Thumbs.db
 
 # Data (never commit large data)
 data/
+!frontend/src/mocks/data/
+!frontend/src/mocks/data/*.ts
 *.db
 *.sqlite3
 

@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 
 type Mode = "live" | "playback";
-type Layout = 1 | 4 | 9 | 16;
+type Layout = 1 | 4 | 9;
 
 type Feed = {
   id: string;
@@ -126,7 +126,7 @@ export default function CameraPage() {
     else await gridRef.current?.requestFullscreen();
   };
 
-  const columns = layout === 1 ? 1 : layout === 4 ? 2 : layout === 9 ? 3 : 4;
+  const columns = layout === 1 ? 1 : layout === 4 ? 2 : 3;
   const rows = columns;
   const cells = Array.from({ length: focused ? 1 : layout }, (_, index) => visibleFeeds[index] ?? null);
   const clock = now.toLocaleTimeString("vi-VN", { hour12: false });
@@ -137,7 +137,7 @@ export default function CameraPage() {
       <div className="nvr-shell">
         <div className="compact-layout-bar" role="group" aria-label="Chọn bố cục camera">
           <span>Bố cục</span>
-          {([1, 4, 9, 16] as Layout[]).map((item) => (
+          {([1, 4, 9] as Layout[]).map((item) => (
             <button key={item} className={!focused && layout === item ? "active" : ""} onClick={() => setGridLayout(item)}>{item}</button>
           ))}
         </div>
@@ -230,4 +230,5 @@ const styles = `
 .bottom-overlay{min-height:34px;padding:6px 10px;background:rgba(5,9,14,.7);backdrop-filter:blur(3px)}.bottom-overlay strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.camera-location{color:#c7d0da;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}@media(max-width:600px){.bottom-overlay{min-height:31px;padding:5px 7px}.camera-location{display:none}.bottom-overlay time{font-size:14px}}
 .bottom-overlay{min-height:0;padding:7px 10px;background:transparent;backdrop-filter:none;text-shadow:0 1px 3px #000,0 0 6px rgba(0,0,0,.95)}.bottom-overlay strong,.bottom-overlay span,.bottom-overlay time{filter:drop-shadow(0 1px 2px #000)}@media(max-width:600px){.bottom-overlay{min-height:0;padding:6px 7px;background:transparent}}
 .nvr-cell{container-type:inline-size}.bottom-overlay{font-size:clamp(14px,4cqw,18px)}.bottom-overlay time{font-size:clamp(14px,3.2cqw,16px)}.offline-state strong,.webcam-placeholder strong{font-size:clamp(14px,4.5cqw,18px)}.offline-state span,.webcam-placeholder span{font-size:clamp(14px,3.4cqw,16px)}.compact-layout-bar button{font-size:clamp(14px,1.1vw,16px)}.mobile-camera-actions strong{font-size:clamp(14px,3.8vw,16px)}.mobile-action-buttons button{font-size:clamp(14px,3.3vw,15px)}
+@media(max-width:600px){.nvr-page{min-height:100%;overflow:visible}.nvr-shell{overflow:hidden}.nvr-stage{overflow:visible}.nvr-grid{height:auto;max-height:none;aspect-ratio:auto;grid-template-columns:repeat(min(var(--nvr-columns),2),minmax(0,1fr));grid-template-rows:none;overflow:visible}.nvr-cell,.empty-cell{height:auto;min-height:0;aspect-ratio:16/9}.nvr-cell>video{position:absolute;inset:0}.nvr-hint{position:relative}.mobile-camera-actions{position:sticky;left:auto;right:auto;bottom:calc(78px + env(safe-area-inset-bottom));margin-top:14px}}
 `;
