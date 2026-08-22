@@ -60,6 +60,7 @@ export interface OverviewData {
     location: string;
     occurredAt: string;
     preview: string;
+    severity: "low" | "medium" | "high" | "critical";
   };
   cameras: Array<{
     id: string;
@@ -105,6 +106,7 @@ export async function getOverview(): Promise<OverviewData> {
       location: data.current_alert.camera_location,
       occurredAt: data.current_alert.timestamp,
       preview: data.current_alert.description,
+      severity: data.current_alert.severity ?? "medium",
     } : null,
     cameras: data.cameras.map((camera) => ({
       id: camera.id,
