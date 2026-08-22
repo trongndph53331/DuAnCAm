@@ -1,0 +1,130 @@
+:root {
+  color-scheme: light;
+  --bg-app: #f5f8fc;
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-subtle: #eef3f8;
+  --text-primary: #172033;
+  --text-secondary: #526174;
+  --text-muted: #6b788a;
+  --text-inverse: #ffffff;
+  --border-default: #d8e2ec;
+  --border-strong: #aebdcd;
+  --divider: #e4ebf2;
+  --focus-ring: #2563eb;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-active: #1e40af;
+  --primary-subtle: #e8f1ff;
+  --success: #16803c;
+  --success-subtle: #e5f7eb;
+  --warning: #9a5b00;
+  --warning-subtle: #fff1cf;
+  --danger: #c52929;
+  --danger-subtle: #ffe8e8;
+  --info: #1769aa;
+  --info-subtle: #e6f3ff;
+  --overlay: rgba(15, 23, 42, .52);
+  --shadow-sm: 0 1px 3px rgba(23, 32, 51, .10);
+  --shadow-md: 0 8px 24px rgba(23, 32, 51, .10);
+  --shadow-lg: 0 20px 48px rgba(23, 32, 51, .16);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 999px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --transition-fast: 120ms ease;
+  --transition-base: 180ms ease;
+  --transition-slow: 260ms ease;
+
+  /* Compatibility aliases for existing screens. */
+  --color-primary: var(--primary);
+  --color-primary-light: var(--primary-subtle);
+  --color-background: var(--bg-app);
+  --color-surface: var(--bg-surface);
+  --color-text: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-border: var(--border-default);
+  --color-safe: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --radius-card: var(--radius-lg);
+  --radius-button: var(--radius-md);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-app: #0d1421;
+  --bg-surface: #151f2e;
+  --bg-elevated: #1b2738;
+  --bg-subtle: #202d3f;
+  --text-primary: #f3f6fa;
+  --text-secondary: #bdc9d7;
+  --text-muted: #98a8bb;
+  --text-inverse: #07101f;
+  --border-default: #34445a;
+  --border-strong: #52657d;
+  --divider: #29384b;
+  --focus-ring: #7db1ff;
+  --primary: #6da8ff;
+  --primary-hover: #8abbff;
+  --primary-active: #a9cbff;
+  --primary-subtle: #203a60;
+  --success: #63d58a;
+  --success-subtle: #193d2a;
+  --warning: #ffc65c;
+  --warning-subtle: #493716;
+  --danger: #ff8585;
+  --danger-subtle: #4c2428;
+  --info: #73c5ff;
+  --info-subtle: #173a54;
+  --overlay: rgba(1, 5, 12, .72);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, .28);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, .32);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, .42);
+}
+
+html { background: var(--bg-app); }
+body { color: var(--text-primary); background: var(--bg-app); }
+* { scrollbar-color: var(--border-strong) var(--bg-subtle); }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: var(--bg-subtle); }
+*::-webkit-scrollbar-thumb { background: var(--border-strong); border: 2px solid var(--bg-subtle); border-radius: var(--radius-full); }
+:where(button, a, input, select, textarea, [tabindex]):focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+::selection { color: var(--text-inverse); background: var(--primary); }
+
+/* Token bridge for common legacy structures; media pixels remain untouched. */
+:root[data-theme="dark"] :where(.sidebar, .topbar, .section-card, .stat-card, .card, .modal, .dialog, table, thead, tbody, tr, td, th) { color: var(--text-primary); background-color: var(--bg-surface); border-color: var(--border-default); }
+:root[data-theme="dark"] :where(input, select, textarea) { color: var(--text-primary); background-color: var(--bg-elevated); border-color: var(--border-default); }
+:root[data-theme="dark"] :where(.route-content, .main-content, .page-wrap, .home-dashboard) { color: var(--text-primary); background-color: var(--bg-app); }
+
+/* Existing shared UI mapped onto semantic roles during the migration. */
+:where(.statistics-page, .history-page, .family-page, .settings-page, .camera-detail-page) { color: var(--text-primary); }
+:where(.statistics-kpi, .statistics-card, .device-card, .hub-card, .family-table-wrap, .family-total, .family-mobile-card, .history-table-wrap, .camera-event-sheet, .camera-action-dialog) { color: var(--text-primary); background-color: var(--bg-surface); border-color: var(--border-default); box-shadow: var(--shadow-sm); }
+:where(.family-table, .history-table) { color: var(--text-primary); background: var(--bg-surface); }
+:where(.family-table, .history-table) th { color: var(--text-secondary); background: var(--bg-subtle); border-color: var(--divider); }
+:where(.family-table, .history-table) td { color: var(--text-primary); border-color: var(--divider); }
+:where(.family-table, .history-table) tbody tr:hover { background: var(--bg-subtle); }
+:where(.family-modal-backdrop, .face-flow-backdrop, .camera-sheet-backdrop, .camera-dialog-backdrop, .snapshot-modal-backdrop, .modal-backdrop) { background: var(--overlay); }
+:where(.family-detail-modal, .face-flow-modal, .camera-event-sheet, .camera-action-dialog, .snapshot-modal) { color: var(--text-primary); background: var(--bg-elevated); border-color: var(--border-default); box-shadow: var(--shadow-lg); }
+:where(.statistics-range, .chart-toggle, .performance-chart-controls select, .custom-range input) { color: var(--text-primary); background: var(--bg-surface); border-color: var(--border-default); }
+:where(.statistics-range, .chart-toggle) button { color: var(--text-secondary); }
+:where(.statistics-range, .chart-toggle) button.active { color: var(--primary); background: var(--primary-subtle); }
+.chart-legend { color: var(--text-secondary); }
+.confirmed { background: var(--primary); }
+.false { background: var(--warning); }
+.unreviewed { background: var(--border-strong); }
+.stacked-bar { background: var(--bg-subtle); }
+.trend-panel { color: var(--text-primary); background: var(--bg-surface); border-color: var(--border-default); }
+.trend-panel .grid-line { stroke: var(--divider); }
+.fps-line { stroke: var(--success); }
+.fps-point { fill: var(--success); }
+:where(.camera-detail-loading i, .overview-skeleton, .alert-skeleton) { background: var(--bg-subtle); }

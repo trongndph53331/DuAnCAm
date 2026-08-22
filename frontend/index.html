@@ -3,7 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f5f9ff" />
+    <meta name="theme-color" content="#f5f8fc" />
+    <script>
+      (function () {
+        var key = "antam-theme";
+        var stored = localStorage.getItem(key);
+        var preference = stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
+        var resolved = preference === "system" ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : preference;
+        document.documentElement.dataset.theme = resolved;
+        document.documentElement.dataset.themePreference = preference;
+        document.documentElement.style.colorScheme = resolved;
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute("content", resolved === "dark" ? "#0d1421" : "#f5f8fc");
+      })();
+    </script>
     <meta name="description" content="An Tâm Home — Hệ thống camera AI hỗ trợ giám sát an toàn người lớn tuổi trong gia đình." />
     <title>An Tâm Home</title>
   </head>

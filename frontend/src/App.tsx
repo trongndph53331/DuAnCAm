@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BarChart3, Bell, Camera, HeartHandshake, History, Home, LogOut, Menu, Settings, ShieldCheck, UsersRound } from "lucide-react";
+import { BarChart3, Bell, Camera, HeartHandshake, History, Home, LogOut, Menu, Monitor, Moon, Settings, ShieldCheck, Sun, UsersRound } from "lucide-react";
 import AlertsPage from "./features/alerts/AlertsPage";
 import CameraPage from "./pages/CameraPage";
 import FamilyPage from "./pages/FamilyPage";
@@ -11,6 +11,7 @@ import { fetchAlerts } from "./features/alerts/alertService";
 import { API_BASE_URL } from "./api/client";
 import { logout, me, type AuthUser } from "./api/auth";
 import LoginPage from "./pages/LoginPage";
+import { IconButton, Tooltip, useTheme } from "./design-system";
 
 const navItems = [
   { label: "Tổng quan", path: "/", icon: Home, badge: undefined },
@@ -31,6 +32,7 @@ const currentPath = (): RoutePath => {
 };
 
 function DashboardApp({ user, onLogout }: { user: AuthUser; onLogout: () => void }) {
+  const { theme, cycleTheme } = useTheme();
   const [activePath, setActivePath] = useState<RoutePath>(currentPath);
   const [routeRevision, setRouteRevision] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -84,7 +86,7 @@ function DashboardApp({ user, onLogout }: { user: AuthUser; onLogout: () => void
     </aside>
     {isMobileLayout && mobileOpen && <button className="scrim" aria-label="Đóng menu" onClick={() => setMobileOpen(false)} />}
     <main className="main-content">
-      <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileOpen(true)} aria-label="Mở menu"><Menu /></button><div className="topbar-spacer" />{activePath === "/alerts" && <span className="topbar-protection"><ShieldCheck /> Đang bảo vệ</span>}<div className="profile"><span className="avatar small">{user.name[0]}</span><span><strong>{user.name}</strong><small>{user.role === "admin" ? "Quản trị viên" : "Người chăm sóc"}</small></span></div><button className="logout-button" onClick={onLogout} title="Đăng xuất"><LogOut /><span>Đăng xuất</span></button></header>
+      <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileOpen(true)} aria-label="Mở menu"><Menu /></button><div className="topbar-spacer" />{activePath === "/alerts" && <span className="topbar-protection"><ShieldCheck /> Đang bảo vệ</span>}<Tooltip content={`Giao diện: ${theme === "light" ? "Sáng" : theme === "dark" ? "Tối" : "Theo hệ thống"}`}><IconButton className="theme-toggle" variant="secondary" label="Chuyển chế độ giao diện" onClick={cycleTheme}>{theme === "light" ? <Sun /> : theme === "dark" ? <Moon /> : <Monitor />}</IconButton></Tooltip><div className="profile"><span className="avatar small">{user.name[0]}</span><span><strong>{user.name}</strong><small>{user.role === "admin" ? "Quản trị viên" : "Người chăm sóc"}</small></span></div><button className="logout-button" onClick={onLogout} title="Đăng xuất"><LogOut /><span>Đăng xuất</span></button></header>
       <div className={`route-content ${activeNav === "Tổng quan" ? "overview-route" : ""} ${activePath === "/history" ? "history-route" : ""} ${activePath === "/family" ? "family-route" : ""}`} key={`${activePath}-${routeRevision}`}><RouteContent path={activePath} /></div>
     </main>
     {isMobileLayout && <nav className="mobile-bottom-nav" aria-label="Điều hướng nhanh trên điện thoại">{navItems.slice(0,4).map(({ label,path,icon:Icon }) => { const badge = path === "/alerts" ? unreadAlerts : 0; return <a key={path} href={path} className={activePath === path ? "active" : ""} onClick={(event) => { event.preventDefault(); navigate(path); }} aria-current={activePath === path ? "page" : undefined}><span className="mobile-nav-icon"><Icon />{badge > 0 ? <span className="mobile-nav-badge">{badge > 99 ? "99+" : badge}</span> : null}</span><span>{label}</span></a>; })}</nav>}
