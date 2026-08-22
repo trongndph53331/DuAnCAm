@@ -1,0 +1,93 @@
+/* Semantic migration layer for existing screen-specific components. */
+:root[data-theme="dark"] {
+:where(h1, h2, h3, h4) { color: var(--text-primary); }
+:where(.sidebar, .topbar, .mobile-bottom-nav, .section-card, .stat-card, .home-hero, .hero-metric, .attention-card, .attention-empty, .family-home-card, .home-camera-card, .ai-insight-card, .home-timeline, .alerts-shell, .alert-list-pane, .alert-conversation, .snapshot-card, .camera-card, .smart-viewer-shell, .camera-safety-card, .latest-camera-event, .camera-history, .camera-event-item, .statistics-kpi, .statistics-card, .device-card, .hub-card, .trend-panel, .history-toolbar, .history-table-wrap, .history-pagination, .family-toolbar, .family-total, .family-table-wrap, .family-mobile-card, .settings-shell, .settings-section-card, .caregiver-panel, .permission-panel, .notification-options > div, .login-card, .companion-panel, .companion-card, .companion-peek) {
+  color: var(--text-primary);
+  background-color: var(--bg-surface);
+  border-color: var(--border-default);
+}
+
+:where(.home-hero.attention, .attention-card, .latest-camera-event, .companion-card.danger) { color: var(--text-primary); background: var(--danger-subtle); border-color: color-mix(in srgb, var(--danger) 38%, var(--border-default)); }
+:where(.home-hero.attention .hero-status-icon, .attention-icon, .latest-event-icon) { color: var(--danger); background: color-mix(in srgb, var(--danger) 15%, var(--bg-surface)); }
+:where(.hero-copy h2, .hero-metric strong, .attention-card h3, .stat-card strong, .statistics-kpi strong) { color: var(--text-primary); }
+:where(.hero-copy > p:last-child, .hero-metric small, .attention-card div > span, .home-section-heading p, .camera-card-copy small) { color: var(--text-secondary); }
+.hero-copy > p:last-child { color: var(--text-secondary) !important; }
+.home-welcome p { color: var(--text-muted); }
+.hero-eyebrow { color: var(--text-secondary) !important; }
+.attention-card p { color: var(--danger); }
+.brand strong { color: var(--primary); }
+.hero-orbit { background: var(--bg-subtle); border-color: var(--border-default); }
+.hero-orbit::before, .hero-orbit::after { border-color: var(--border-default); }
+.hero-orbit::after { background: var(--bg-surface); }
+.attention-card button { color: var(--danger); background: var(--bg-surface); border-color: color-mix(in srgb, var(--danger) 38%, var(--border-default)); }
+.attention-card button:hover { background: color-mix(in srgb, var(--danger) 10%, var(--bg-surface)); }
+.home-welcome > span, .topbar-protection, .attention-empty { color: var(--success); background: var(--success-subtle); border-color: color-mix(in srgb, var(--success) 35%, var(--border-default)); }
+.ai-insight-card { background: var(--info-subtle); }
+.insight-icon { color: var(--info); background: var(--bg-surface); }
+.ai-insight-card li { color: var(--text-secondary); }
+
+:where(.nav-item, .mobile-bottom-nav a, .settings-tabs button, .dashboard-camera-filters button, .camera-history-filters button, .statistics-range button, .chart-toggle button) { color: var(--text-secondary); }
+:where(.dashboard-camera-filters button, .camera-history-filters button, .statistics-range, .chart-toggle) { background: var(--bg-surface); border-color: var(--border-default); }
+:where(.home-section-heading button, .text-button, .family-profile-link, .companion-card button) { color: var(--primary); }
+:where(.nav-item:hover, .mobile-bottom-nav a:hover, .settings-tabs button:hover, .dashboard-camera-filters button:hover, .camera-history-filters button:hover) { color: var(--primary); background: var(--interactive-hover); border-color: var(--border-strong); }
+:where(.nav-item.active, .mobile-bottom-nav a.active, .settings-tabs button.active, .dashboard-camera-filters button.active, .camera-history-filters button.active, .statistics-range button.active, .chart-toggle button.active) { color: var(--primary); background: var(--primary-subtle); border-color: var(--primary); }
+:where(.icon-button, .notification-button, .logout-button, .text-button) { color: var(--text-secondary); background: var(--bg-surface); border-color: var(--border-default); }
+:where(.icon-button:hover, .notification-button:hover, .logout-button:hover, .text-button:hover) { color: var(--primary); background: var(--interactive-hover); }
+
+:where(input:not([type="range"]), select, textarea) { color: var(--text-primary); background-color: var(--bg-elevated); border-color: var(--border-default); }
+:where(input:not([type="range"]), select, textarea)::placeholder { color: var(--text-muted); }
+:where(input:not([type="range"]), select, textarea):hover:not(:disabled) { border-color: var(--border-strong); }
+:where(input:not([type="range"]), select, textarea):focus-visible { outline: 0; border-color: var(--focus-ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 28%, transparent); }
+:where(input, select, textarea, button):disabled { opacity: .55; }
+
+:where(.family-table, .history-table, .settings-user-table) { color: var(--text-primary); background: var(--bg-surface); }
+:where(.family-table th, .history-table th, .user-table-head) { color: var(--text-secondary); background: var(--bg-subtle); border-color: var(--divider); }
+:where(.family-table td, .history-table td, .user-table-row) { color: var(--text-primary); border-color: var(--divider); }
+:where(.family-table tbody tr:hover, .history-table tbody tr:hover, .user-table-row:hover) { background: var(--interactive-hover); }
+.history-total { color: var(--text-primary); background: var(--bg-surface); border-color: var(--border-default); }
+.history-total small, .history-title-line p { color: var(--text-secondary); }
+.history-table th { color: var(--text-secondary); background: var(--bg-subtle); border-color: var(--divider); }
+.history-table td { color: var(--text-primary); background: var(--bg-surface); border-color: var(--divider); }
+.history-table .unknown-person { color: var(--danger); }
+
+:where(.family-modal-backdrop, .face-flow-backdrop, .camera-sheet-backdrop, .camera-dialog-backdrop, .camera-edit-backdrop, .settings-modal-backdrop, .snapshot-modal-backdrop, .companion-backdrop) { background: var(--overlay); }
+:where(.family-detail-modal, .add-person-modal, .face-flow, .camera-event-sheet, .camera-action-dialog, .camera-edit-modal, .settings-modal, .snapshot-modal, .companion-panel) { color: var(--text-primary); background-color: var(--bg-elevated); border-color: var(--border-default); box-shadow: var(--shadow-lg); }
+:where(.family-detail-modal > header, .family-detail-modal > footer, .settings-modal > header, .companion-panel > header, .companion-panel > footer) { color: var(--text-primary); background: var(--bg-surface); border-color: var(--divider); }
+
+:where(.status-label.safe, .operational-badge.online, .account-badge.active, .recognition-quality.good) { color: var(--success); background: var(--success-subtle); }
+:where(.status-label.warning, .recognition-quality.fair, .threshold-banner) { color: var(--warning); background: var(--warning-subtle); }
+:where(.status-label.danger, .operational-badge.error, .recognition-quality.poor, .statistics-error) { color: var(--danger); background: var(--danger-subtle); }
+:where(.status-label.pending, .role-badge.caregiver, .person-status.active) { color: var(--info); background: var(--info-subtle); }
+
+:where(.statistics-header p, .statistics-card-heading p, .performance-title p, .chart-legend, .alert-bar-column b, .camera-stats small, .hub-card p, .device-card header p, .settings-heading p, .section-page-heading p, .settings-card-heading p, .permission-row p, .user-table-row small) { color: var(--text-secondary); }
+.statistics-kpi p { color: var(--text-secondary); }
+.stats-trend.good { color: var(--success); }
+.stats-trend.bad { color: var(--danger); }
+:where(.stacked-bar, .camera-stats > div > div, .reason-list li, .hub-card > div > span, .device-metrics > span, .sensitive-hours, .last-admin-note) { color: var(--text-secondary); background: var(--bg-subtle); }
+.trend-panel .grid-line { stroke: var(--divider); }
+.fps-line { stroke: var(--success); }
+.fps-point { fill: var(--success); }
+.latency-line { stroke: var(--info); }
+.latency-point { fill: var(--info); }
+
+:where(.permission-toggle) { background: var(--border-strong); }
+.permission-toggle i { background: var(--bg-elevated); box-shadow: var(--shadow-sm); }
+.permission-toggle.on { background: var(--primary); }
+.permission-toggle:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 30%, transparent); }
+:where(.settings-tabs, .companion-body, .companion-help-messages) { color: var(--text-primary); background: var(--bg-subtle); border-color: var(--divider); }
+.camera-setting-toggles label { color: var(--text-secondary); }
+
+:where(.smart-camera-heading p, .family-heading p, .history-heading p, .statistics-header p) { color: var(--text-secondary); }
+:where(.alerts-list-panel, .alert-conversation, .conversation-header, .alert-product-detail, .event-detail-card, .event-case-header, .event-description, .event-facts, .confidence-card, .camera-preview-card, .chat-input-wrap) { color: var(--text-primary); background: var(--bg-surface); border-color: var(--border-default); }
+:where(.alerts-page-heading p, .conversation-header small, .alert-product-copy small, .event-meta, .event-description p) { color: var(--text-secondary); }
+:where(.alert-list-tools, .alert-list-scroll, .conversation-timeline) { color: var(--text-primary); background: var(--bg-subtle); border-color: var(--divider); }
+
+/* Media pixels are never filtered; only readable overlays are themed. */
+:where(.camera-live, .detail-live-badge, .people-count) { color: var(--text-primary); background: var(--media-overlay-soft); }
+:where(.dashboard-camera-name, .live-overlay, .camera-fullscreen-modal header, .event-sheet-snapshot > b) { color: var(--text-inverse); }
+:where(.camera-fullscreen-button, .live-overlay button) { color: var(--text-inverse); background: var(--media-overlay); border-color: color-mix(in srgb, var(--text-inverse) 35%, transparent); }
+:where(.home-camera-preview img, .home-camera-preview video, .snapshot-card img, .event-sheet-snapshot img, .detail-live-card img, .detail-live-card video) { filter: none; color-scheme: only light; }
+
+:where(.privacy-note, .system-banner, .companion-intro, .companion-reply, .companion-message > div > p, .capture-guidance, .face-upload) { color: var(--text-secondary); background: var(--info-subtle); border-color: var(--border-default); }
+:where(.family-basic-form, .face-profiles-section, .person-active-setting, .face-profile-card, .recipient-list > div, .contact-row) { color: var(--text-primary); background: var(--bg-surface); border-color: var(--border-default); }
+}

@@ -4,6 +4,7 @@ import App from "./App";
 import { ThemeProvider } from "./design-system";
 import "./styles.css";
 import "./design-system/tokens.css";
+import "./design-system/legacy-migration.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

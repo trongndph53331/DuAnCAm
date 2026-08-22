@@ -1,16 +1,18 @@
-import { Bell, Camera, Check, Clock3, History, LockKeyhole, Plus, RefreshCw, Save, Settings, ShieldCheck, SlidersHorizontal, UserPlus, UsersRound, X } from "lucide-react";
+import { Bell, Camera, Check, Clock3, History, Laptop, LockKeyhole, Moon, Palette, Plus, RefreshCw, Save, Settings, ShieldCheck, SlidersHorizontal, Sun, UserPlus, UsersRound, X } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   createSettingsUser, getSettings, saveGeneral, saveNotifications, setSettingsCameraActive, setSettingsCameraVision,
   setSettingsUserActive, setUserPermission, type PermissionKey, type SettingsData, type SettingsUser,
 } from "../api/settings";
 import "./settings.css";
+import { useTheme, type ThemePreference } from "../design-system";
 
 const tabs = [
   { id: "general", label: "Cài đặt chung", icon: Settings },
   { id: "users", label: "Quản lý người dùng", icon: UsersRound },
   { id: "permissions", label: "Phân quyền", icon: LockKeyhole },
   { id: "notifications", label: "Thông báo", icon: Bell },
+  { id: "appearance", label: "Giao diện", icon: Palette },
 ] as const;
 type Tab = typeof tabs[number]["id"];
 const permissionLabels: Record<PermissionKey,string> = {
@@ -23,6 +25,7 @@ function Toggle({ value, onChange, disabled=false, label }: { value:boolean; onC
 }
 
 export default function SettingsPage() {
+  const { theme, setTheme } = useTheme();
   const [data,setData]=useState<SettingsData|null>(null); const [tab,setTab]=useState<Tab>("general");
   const [loading,setLoading]=useState(true); const [error,setError]=useState(""); const [saved,setSaved]=useState(false);
   const [invite,setInvite]=useState(false); const [selectedUser,setSelectedUser]=useState("");
@@ -61,9 +64,20 @@ export default function SettingsPage() {
         {tab==="permissions"&&<div className="permission-view"><header className="permission-heading"><div><h2>Phân quyền</h2><p>Quyền caregiver được lưu trong `user_permissions`.</p></div></header><div className="permission-layout"><aside className="caregiver-panel"><div className="caregiver-list">{data.users.map((user)=><button key={user.id} className={selectedUser===user.id?"selected":""} onClick={()=>setSelectedUser(user.id)}><span className="caregiver-avatar">{user.name.split(" ").map((part)=>part[0]).slice(-2).join("")}</span><span><strong>{user.name}</strong><small>{user.email}</small></span></button>)}</div></aside>{selected&&<section className="permission-panel"><header><span className="caregiver-avatar large">{selected.name[0]}</span><div><h3>{selected.name}</h3><p>{selected.role}</p></div></header><div className="permission-groups"><section><h4><History/> Quyền hệ thống</h4>{(Object.keys(permissionLabels) as PermissionKey[]).map((key)=><div className="permission-row" key={key}><div><strong>{permissionLabels[key]}</strong><p>{selected.role==="admin"?"Admin luôn có quyền này.":"Cho phép caregiver thực hiện thao tác."}</p></div><Toggle label={permissionLabels[key]} value={selected.permissions[key]} disabled={selected.role==="admin"||!selected.active} onChange={()=>togglePermission(key)}/></div>)}</section></div></section>}</div></div>}
 
         {tab==="notifications"&&<div className="settings-scroll-content"><header className="section-page-heading"><div><h2>Thông báo</h2><p>Cấu hình cách Local Hub thông báo cảnh báo.</p></div></header><section className="settings-section-card"><div className="settings-card-heading"><span><Bell/></span><div><h3>Kênh thông báo</h3><p>SMS bị khóa vì baseline chưa có hạ tầng gửi thật.</p></div></div><div className="notification-options">{(["app","email","sms"] as const).map((key)=><div key={key}><Bell/><span><strong>{key.toUpperCase()}</strong><small>{key==="sms"?"Chưa khả dụng":"Được lưu trên Local Hub"}</small></span><Toggle label={key} disabled={key==="sms"} value={data.notifications[key]} onChange={()=>updateDraft({...data,notifications:{...data.notifications,[key]:!data.notifications[key]}})}/></div>)}</div></section><section className="settings-section-card"><div className="setting-inline-row"><label><span>Mức độ nhận</span><select value={data.notifications.level} onChange={(event)=>updateDraft({...data,notifications:{...data.notifications,level:event.target.value as "all"|"important"}})}><option value="all">Tất cả</option><option value="important">Chỉ high / critical</option></select></label><div><strong>Gộp cảnh báo</strong><small>Gộp cảnh báo liên tiếp.</small></div><Toggle label="Gộp cảnh báo" value={data.notifications.grouped} onChange={()=>updateDraft({...data,notifications:{...data.notifications,grouped:!data.notifications.grouped}})}/></div><div className="quiet-hours"><Toggle label="Giờ yên tĩnh" value={data.notifications.quiet_enabled} onChange={()=>updateDraft({...data,notifications:{...data.notifications,quiet_enabled:!data.notifications.quiet_enabled}})}/><label><span>Từ</span><input type="time" value={data.notifications.quiet_from} onChange={(event)=>updateDraft({...data,notifications:{...data.notifications,quiet_from:event.target.value}})}/></label><label><span>Đến</span><input type="time" value={data.notifications.quiet_to} onChange={(event)=>updateDraft({...data,notifications:{...data.notifications,quiet_to:event.target.value}})}/></label></div><div className="settings-card-actions"><button className={`settings-save ${saved?"saved":""}`} onClick={saveNotificationSettings}>{saved?<><Check/> Đã lưu</>:<><Save/> Lưu thông báo</>}</button></div></section></div>}
+
+        {tab==="appearance"&&<AppearanceSettings theme={theme} onChange={setTheme}/>}
       </main></div>
     {invite&&<div className="settings-modal-backdrop"><form className="settings-modal" onSubmit={addUser}><header><div><h3>Thêm thành viên</h3><p>Tạo tài khoản cục bộ. Người dùng sẽ đổi mật khẩu sau lần đăng nhập đầu tiên.</p></div><button type="button" onClick={()=>setInvite(false)}><X/></button></header><label><span>Tên</span><input name="name" required/></label><label><span>Email</span><input name="email" type="email" required/></label><label><span>Mật khẩu tạm</span><input name="password" type="password" minLength={8} required/></label><label><span>Vai trò</span><select name="role"><option value="caregiver">Caregiver</option><option value="admin">Admin</option></select></label><footer><button type="button" onClick={()=>setInvite(false)}>Huỷ</button><button type="submit"><Plus/> Thêm</button></footer></form></div>}
   </section>;
+}
+
+function AppearanceSettings({ theme, onChange }: { theme: ThemePreference; onChange: (theme: ThemePreference) => void }) {
+  const choices = [
+    { value: "light" as const, label: "Sáng", description: "Luôn sử dụng giao diện sáng.", icon: Sun },
+    { value: "dark" as const, label: "Tối", description: "Giảm độ chói trong môi trường thiếu sáng.", icon: Moon },
+    { value: "system" as const, label: "Theo hệ thống", description: "Tự động theo cài đặt giao diện của thiết bị.", icon: Laptop },
+  ];
+  return <div className="settings-scroll-content"><header className="section-page-heading"><div><h2>Giao diện</h2><p>Lựa chọn được lưu trên thiết bị này và áp dụng ngay lập tức.</p></div></header><section className="settings-section-card appearance-settings"><div className="settings-card-heading"><span><Palette/></span><div><h3>Chế độ màu</h3><p>Chọn giao diện phù hợp với môi trường sử dụng.</p></div></div><div className="appearance-options" role="radiogroup" aria-label="Chế độ giao diện">{choices.map(({ value, label, description, icon: Icon })=><button type="button" role="radio" aria-checked={theme===value} className={theme===value?"selected":""} key={value} onClick={()=>onChange(value)}><span><Icon/></span><span><strong>{label}</strong><small>{description}</small></span><i aria-hidden="true">{theme===value&&<Check/>}</i></button>)}</div></section></div>;
 }
 
 function runtimeLabel(status:string):string{if(status==="online")return "Đang chạy";if(status==="connecting")return "Đang kết nối";if(status==="error")return "Lỗi nguồn";if(status==="ended")return "Đã kết thúc";return "Đã dừng"}
