@@ -27,17 +27,17 @@
 .threshold-help{margin:10px 0 0;color:var(--text-secondary);font-size:11px;line-height:1.55}
 .threshold-warning{margin-top:10px;padding:10px 12px;border:1px solid var(--warning-border,#f1b95c);border-radius:var(--radius-md);background:var(--warning-subtle,#fff7df);color:var(--warning-text,#8a5400);display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700}
 .threshold-warning svg{width:17px;flex:0 0 auto}
-.settings-save-bar{position:sticky;z-index:20;bottom:0;min-height:58px;margin:0 20px 18px;padding:9px 12px;border:1px solid var(--border-default);border-radius:var(--radius-lg);background:color-mix(in srgb,var(--bg-surface) 94%,transparent);box-shadow:var(--shadow-lg);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--text-secondary);font-size:12px;font-weight:700}
-.settings-save-bar.dirty{border-color:var(--primary);color:var(--text-primary)}
-.settings-save-bar.saved{border-color:var(--success,#168743);color:var(--success,#168743)}
-.settings-save-bar.error{border-color:var(--danger,#dc3030);color:var(--danger,#dc3030)}
-.settings-save-bar button{min-height:40px;padding:0 14px;border:0;border-radius:var(--radius-md);background:var(--primary);color:var(--text-inverse);display:flex;align-items:center;gap:7px;font-weight:750;cursor:pointer}
-.settings-save-bar button:disabled{opacity:.5;cursor:not-allowed}
-.settings-save-bar button svg{width:16px}
-.settings-save-bar .spin{animation:settingsSpin 1s linear infinite}
 @keyframes settingsSpin{to{transform:rotate(360deg)}}
 .settings-page button:focus-visible,.settings-page input:focus-visible,.settings-page select:focus-visible,.settings-page textarea:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
-@media(max-width:700px){.settings-page{padding-bottom:calc(96px + env(safe-area-inset-bottom))}.settings-shell{overflow:visible}.settings-content{height:auto;overflow:visible}.settings-tabs{overflow-x:auto}.settings-save-bar{bottom:calc(70px + env(safe-area-inset-bottom));margin:0 2px 14px;min-height:56px}.settings-save-bar button{min-width:44px;min-height:44px}.camera-setting-toggles{grid-column:2/4;display:flex;flex-wrap:wrap;gap:10px}.camera-setting-toggles label{min-height:44px;display:flex;align-items:center;gap:7px}}
+@media(max-width:700px){.settings-page{padding-bottom:calc(96px + env(safe-area-inset-bottom))}.settings-shell{overflow:visible}.settings-content{height:auto;overflow:visible}.settings-tabs{overflow-x:auto}.camera-setting-toggles{grid-column:2/4;display:flex;flex-wrap:wrap;gap:10px}.camera-setting-toggles label{min-height:44px;display:flex;align-items:center;gap:7px}}
+.vision-disabled-reason{margin-top:5px!important;color:var(--warning-text,#8a5400)!important;font-weight:650}
+.camera-save-feedback{min-height:20px;margin-top:5px!important;display:flex!important;align-items:center;gap:5px;font-weight:750}
+.camera-save-feedback svg{width:14px;height:14px;flex:0 0 auto}
+.camera-save-feedback.saving{color:var(--primary)!important}
+.camera-save-feedback.saved{color:var(--success,#168743)!important}
+.camera-save-feedback.error{color:var(--danger,#c53030)!important}
+.camera-save-feedback .spin{animation:settingsSpin 1s linear infinite}
+@media(max-width:700px){.settings-page.page-wrap{padding-bottom:calc(96px + env(safe-area-inset-bottom))}}
 
 /* Permissions user picker only. */
 .permission-view .caregiver-panel{color:var(--text-primary);background:var(--bg-surface);border-color:var(--border-default)}

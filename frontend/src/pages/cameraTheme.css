@@ -3,6 +3,9 @@
 .smart-camera-heading p{color:var(--text-secondary)}
 .smart-camera-heading>span{color:var(--success);background:var(--success-subtle)}
 .smart-viewer-shell{color:var(--text-primary);background:var(--bg-surface);border-color:var(--border-default);box-shadow:var(--shadow-md)}
+.camera-detail-button{color:var(--primary);background:var(--bg-elevated);border-color:var(--border-default);transition:color var(--transition-fast),background var(--transition-fast),border-color var(--transition-fast),box-shadow var(--transition-fast)}
+.camera-detail-button:hover{color:var(--primary-hover);background:var(--interactive-hover);border-color:var(--border-strong)}
+.camera-detail-button:focus-visible{outline:0;color:var(--primary);background:var(--interactive-hover);border-color:var(--focus-ring);box-shadow:0 0 0 3px color-mix(in srgb,var(--focus-ring) 28%,transparent)}
 
 .camera-selector-wrap>header h2{color:var(--text-primary)}
 .camera-selector-wrap>header button{color:var(--text-secondary);background:var(--bg-elevated);border-color:var(--border-default)}

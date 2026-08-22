@@ -1,4 +1,4 @@
-import { AlertTriangle, Camera, Check, HelpCircle, Image, MoreHorizontal, Plus, RefreshCw, Search, ShieldCheck, Trash2, UsersRound, X } from "lucide-react";
+import { AlertTriangle, Camera, Check, Eye, HelpCircle, Image, LoaderCircle, Plus, RefreshCw, Search, ShieldCheck, Trash2, UserCheck, UserX, UsersRound, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { addFace, createPerson, deleteFace, getPeople, updatePerson, type PersonDto } from "../api/persons";
 import "./family.css";
@@ -32,7 +32,12 @@ export default function FamilyPage() {
   const [faceImage, setFaceImage] = useState<string | null>(null);
   const [faceError, setFaceError] = useState("");
   const [mutationError, setMutationError] = useState("");
-  const [rowMenu, setRowMenu] = useState<string | null>(null);
+  const [statusTarget, setStatusTarget] = useState<Person | null>(null);
+  const [statusSubmitting, setStatusSubmitting] = useState(false);
+  const [statusError, setStatusError] = useState("");
+  const [toast, setToast] = useState("");
+  const statusDialogRef = useRef<HTMLElement>(null);
+  const statusTriggerRef = useRef<HTMLButtonElement | null>(null);
   const faceReaderRef = useRef<FileReader | null>(null);
 
   const releaseFaceReader = (reader: FileReader) => {
@@ -56,6 +61,14 @@ export default function FamilyPage() {
   useEffect(() => () => {
     abortCurrentFaceReader();
   }, []);
+  useEffect(() => {
+    if (!statusTarget) return;
+    statusDialogRef.current?.focus();
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape" && !statusSubmitting) closeStatusDialog(); };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [statusTarget, statusSubmitting]);
+  useEffect(() => { if (!toast) return; const timer = window.setTimeout(() => setToast(""), 3500); return () => window.clearTimeout(timer); }, [toast]);
 
   const selected = people.find((person) => person.id === selectedId) ?? null;
   const visible = useMemo(() => people.filter((person) => {
@@ -78,15 +91,35 @@ export default function FamilyPage() {
       load();
     });
   };
-  const togglePerson = (person: Person) => {
-    const active = !person.active;
-    setMutationError("");
-    setPeople((items) => items.map((item) => item.id === person.id ? { ...item, active } : item));
-    void updatePerson(person.id, { active }).then(replacePerson).catch((updateError: unknown) => {
+  const openStatusDialog = (person: Person, trigger: HTMLButtonElement) => { statusTriggerRef.current = trigger; setStatusError(""); setStatusTarget(person); };
+  const closeStatusDialog = () => {
+    if (statusSubmitting) return;
+    setStatusTarget(null); setStatusError("");
+    requestAnimationFrame(() => statusTriggerRef.current?.focus());
+  };
+  const confirmStatusChange = async () => {
+    if (!statusTarget || statusSubmitting) return;
+    const latest = people.find((item) => item.id === statusTarget.id);
+    if (!latest || latest.active !== statusTarget.active) {
+      setStatusError("Trạng thái đã được thay đổi từ yêu cầu khác. Danh sách đã được tải lại."); load(); return;
+    }
+    const active = !statusTarget.active;
+    setStatusSubmitting(true); setStatusError(""); setMutationError("");
+    try {
+      const updated = await updatePerson(statusTarget.id, { active });
+      replacePerson(updated);
+      setStatusTarget(null);
+      setToast(active ? `Đã kích hoạt ${statusTarget.name}.` : `Đã vô hiệu hoá ${statusTarget.name}.`);
+      requestAnimationFrame(() => statusTriggerRef.current?.focus());
+    } catch (updateError: unknown) {
       console.error("Không thể cập nhật trạng thái người thân", updateError);
-      setMutationError("Không thể thay đổi trạng thái. Dữ liệu trước đó đã được khôi phục.");
-      load();
-    });
+      try {
+        const refreshed = (await getPeople()).map(toPerson);
+        setPeople(refreshed);
+        const serverPerson = refreshed.find((item) => item.id === statusTarget.id);
+        setStatusError(serverPerson && serverPerson.active !== statusTarget.active ? "Trạng thái đã được thay đổi từ yêu cầu khác. Danh sách đã được tải lại." : "Không thể thay đổi trạng thái. Vui lòng kiểm tra kết nối và thử lại.");
+      } catch { setStatusError("Không thể thay đổi trạng thái. Vui lòng kiểm tra kết nối và thử lại."); }
+    } finally { setStatusSubmitting(false); }
   };
   const submitPerson = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -158,10 +191,10 @@ export default function FamilyPage() {
           <td><PersonAvatar person={person} /></td><td><strong>{person.name}</strong></td><td><span className="relationship-badge">{person.relationship}</span></td>
           <td><span className="face-count"><Image /> {person.faces.length} ảnh khuôn mặt</span></td><td><div className={`recognition-quality ${quality.tone}`} title="Điểm tổng hợp từ chất lượng các ảnh khuôn mặt đã đăng ký; điểm cao giúp nhận diện ổn định hơn."><i /><span>{quality.label}</span>{person.faces.length > 0 && <small>{Math.round(score * 100)}%</small>}<HelpCircle /></div>{quality.tone !== "good" && <button className="family-add-photo-cta" onClick={(event)=>{event.stopPropagation();setSelectedId(person.id);setFaceFlow(true)}}>Bổ sung ảnh</button>}</td>
           <td><span className={`person-status ${person.active ? "active" : "hidden"}`}>{person.active ? "Đang hoạt động" : "Đã ẩn"}</span></td>
-          <td><div className="family-row-actions"><button className="family-profile-link" onClick={(event) => { event.stopPropagation(); setSelectedId(person.id); }}>Xem hồ sơ</button><button className="family-more-button" aria-label={`Hành động khác cho ${person.name}`} aria-expanded={rowMenu===person.id} onClick={(event)=>{event.stopPropagation();setRowMenu(value=>value===person.id?null:person.id)}}><MoreHorizontal/></button>{rowMenu===person.id&&<div className="family-row-menu"><button onClick={(event)=>{event.stopPropagation();setRowMenu(null);togglePerson(person)}}>{person.active ? "Vô hiệu hoá" : "Kích hoạt"}</button></div>}</div></td>
+          <td><div className="family-row-actions"><button className="family-profile-link" title={`Xem hồ sơ của ${person.name}`} onClick={(event) => { event.stopPropagation(); setSelectedId(person.id); }}><Eye/>Xem hồ sơ</button><button className={`family-status-action ${person.active ? "deactivate" : "activate"}`} title={person.active ? "Tạm ngừng sử dụng hồ sơ này để nhận diện" : "Sử dụng lại hồ sơ này để nhận diện"} onClick={(event)=>{event.stopPropagation();openStatusDialog(person,event.currentTarget)}}>{person.active?<UserX/>:<UserCheck/>}{person.active ? "Vô hiệu hoá" : "Kích hoạt"}</button></div></td>
         </tr>; })}
       </tbody></table></div>
-      <section className="family-mobile-list">{visible.map((person) => {const quality=qualityInfo(averageQuality(person),person.faces.length);return <button key={person.id} className={`family-mobile-card ${!person.active ? "hidden-person" : ""}`} onClick={() => setSelectedId(person.id)}><PersonAvatar person={person} /><span className="family-mobile-copy"><strong>{person.name}</strong><small>{person.relationship} · {person.faces.length} ảnh khuôn mặt</small><small className={`mobile-quality ${quality.tone}`}>{quality.label}{quality.tone!=="good"?" · Cần bổ sung ảnh":""}</small></span><span className={`person-status ${person.active ? "active" : "hidden"}`}>{person.active ? "Hoạt động" : "Đã ẩn"}</span></button>})}</section>
+      <section className="family-mobile-list">{visible.map((person) => {const quality=qualityInfo(averageQuality(person),person.faces.length);return <article key={person.id} className={`family-mobile-card ${!person.active ? "hidden-person" : ""}`}><PersonAvatar person={person} /><span className="family-mobile-copy"><strong>{person.name}</strong><small>{person.relationship} · {person.faces.length} ảnh khuôn mặt</small><small className={`mobile-quality ${quality.tone}`}>{quality.label}{quality.tone!=="good"?" · Cần bổ sung ảnh":""}</small></span><span className={`person-status ${person.active ? "active" : "hidden"}`}>{person.active ? "Hoạt động" : "Đã ẩn"}</span><div className="family-mobile-actions"><button title={`Xem hồ sơ của ${person.name}`} onClick={()=>setSelectedId(person.id)}><Eye/>Xem hồ sơ</button><button className={person.active?"deactivate":"activate"} title={person.active?"Tạm ngừng sử dụng hồ sơ này để nhận diện":"Sử dụng lại hồ sơ này để nhận diện"} onClick={(event)=>openStatusDialog(person,event.currentTarget)}>{person.active?<UserX/>:<UserCheck/>}{person.active?"Vô hiệu hoá":"Kích hoạt"}</button></div></article>})}</section>
     </> : <div className="family-empty"><UsersRound /><h2>Chưa có người thân phù hợp</h2><p>Thêm hồ sơ đầu tiên hoặc thay đổi bộ lọc tìm kiếm.</p><button onClick={() => setAdding(true)}>+ Thêm người thân</button></div>}
 
     {selected && <div className="family-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setSelectedId(null)}><article className="family-detail-modal">
@@ -175,12 +208,14 @@ export default function FamilyPage() {
       <section className="face-profiles-section"><div className="family-section-title row"><div><h3>Ảnh khuôn mặt đã đăng ký</h3><small>Embedding chỉ nằm trên Local Hub.</small></div><button onClick={() => setFaceFlow(true)}><Plus /> Thêm ảnh khuôn mặt</button></div>
         {selected.faces.length ? <div className="face-profile-grid">{selected.faces.map((face) => <div key={face.id} className="face-profile-card"><span className={`face-thumbnail ${selected.color}`}>{selected.name.split(" ").at(-1)?.[0]}</span><div><strong>{face.angle}</strong><small>{face.model}</small><div className="face-quality-bar good"><span><i style={{ width: `${face.quality * 100}%` }} /></span><b>{Math.round(face.quality * 100)}%</b></div></div><button title="Xóa ảnh" onClick={() => removeFace(face.id)}><Trash2 /></button></div>)}</div> : <div className="no-face-state"><Image /><strong>Chưa có ảnh khuôn mặt</strong><p>Thêm ảnh rõ mặt để bắt đầu nhận diện.</p></div>}
       </section>
-      <section className={`person-active-setting ${!selected.active ? "warning" : ""}`}><div>{selected.active ? <ShieldCheck /> : <AlertTriangle />}<span><strong>Cho phép nhận diện người này</strong><small>{selected.active ? "Hệ thống đang coi đây là người quen." : "Người này có thể được đánh dấu là người lạ."}</small></span></div><button className={`family-switch ${selected.active ? "on" : ""}`} onClick={() => togglePerson(selected)}><i /></button></section>
+      <section className={`person-active-setting ${!selected.active ? "warning" : ""}`}><div>{selected.active ? <ShieldCheck /> : <AlertTriangle />}<span><strong>Cho phép nhận diện người này</strong><small>{selected.active ? "Hệ thống đang coi đây là người quen." : "Người này có thể được đánh dấu là người lạ."}</small></span></div><button className={`family-switch ${selected.active ? "on" : ""}`} aria-label={selected.active?`Vô hiệu hoá ${selected.name}`:`Kích hoạt ${selected.name}`} title={selected.active?"Tạm ngừng sử dụng hồ sơ này để nhận diện":"Sử dụng lại hồ sơ này để nhận diện"} onClick={(event) => openStatusDialog(selected,event.currentTarget)}><i /></button></section>
       </div><footer><span><Check /> Thay đổi được lưu vào Local Hub</span><button onClick={() => setSelectedId(null)}>Đóng</button></footer>
     </article></div>}
 
     {adding && <div className="family-modal-backdrop"><form className="add-person-modal" onSubmit={submitPerson}><header><div><h2>Thêm người thân</h2><p>Tạo hồ sơ người quen mới.</p></div><button type="button" onClick={() => setAdding(false)}><X /></button></header><label><span>Tên hiển thị</span><input name="name" required /></label><label><span>Mối quan hệ</span><input name="relationship" required /></label><label><span>Ngày sinh</span><input name="birth" type="date" /></label><label><span>Ghi chú</span><textarea name="notes" /></label><footer><button type="button" onClick={() => setAdding(false)}>Huỷ</button><button type="submit">Thêm người thân</button></footer></form></div>}
 
     {faceFlow && selected && <div className="face-flow-backdrop"><article className="face-flow"><header><div><h2>Thêm ảnh khuôn mặt</h2><p>{selected.name}</p></div><button onClick={closeFaceFlow}><X /></button></header><div className="capture-guidance"><Camera /><div><strong>Chọn ảnh rõ mặt và đủ sáng</strong><p>InsightFace xử lý cục bộ, embedding được lưu trong SQLite và gallery cập nhật ngay.</p></div></div><label className="capture-zone"><Image /><strong>{faceImage ? "Chọn ảnh khác" : "Chọn ảnh khuôn mặt"}</strong><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => chooseFace(event.target.files?.[0])} hidden /></label>{faceImage && <div className="face-preview"><img src={faceImage} alt={`Ảnh khuôn mặt ${selected.name}`} /></div>}{faceError && <p className="family-form-error">{faceError}</p>}<footer><button onClick={() => setFaceImage(null)} disabled={!faceImage}><RefreshCw /> Chọn lại</button><button className="upload-button" disabled={!faceImage} onClick={() => void saveFace()}>Tạo embedding và lưu</button></footer></article></div>}
+    {statusTarget && <div className="family-status-backdrop" onMouseDown={(event)=>event.target===event.currentTarget&&!statusSubmitting&&closeStatusDialog()}><article ref={statusDialogRef} className="family-status-dialog" role="dialog" aria-modal="true" aria-labelledby="family-status-title" aria-describedby="family-status-description" tabIndex={-1}><header><span className={statusTarget.active?"danger":"success"}>{statusTarget.active?<UserX/>:<UserCheck/>}</span><div><h2 id="family-status-title">{statusTarget.active?"Vô hiệu hoá người thân?":"Kích hoạt người thân?"}</h2><p id="family-status-description">{statusTarget.active?`Bạn có chắc muốn vô hiệu hoá ${statusTarget.name}? Hệ thống sẽ tạm ngừng sử dụng hồ sơ khuôn mặt này để nhận diện. Ảnh và thông tin đã lưu không bị xoá.`:`Bạn có chắc muốn kích hoạt lại ${statusTarget.name}? Hồ sơ khuôn mặt này sẽ được sử dụng cho quá trình nhận diện.`}</p></div></header>{statusError&&<p className="family-status-error" role="alert"><AlertTriangle/>{statusError}</p>}<footer><button disabled={statusSubmitting} onClick={closeStatusDialog}>Huỷ</button><button disabled={statusSubmitting} className={statusTarget.active?"confirm-danger":"confirm-success"} onClick={()=>void confirmStatusChange()}>{statusSubmitting?<LoaderCircle className="spin"/>:statusTarget.active?<UserX/>:<UserCheck/>}{statusSubmitting?"Đang xử lý…":statusTarget.active?"Vô hiệu hoá":"Kích hoạt"}</button></footer></article></div>}
+    {toast&&<div className="family-toast" role="status"><Check/>{toast}</div>}
   </section>;
 }

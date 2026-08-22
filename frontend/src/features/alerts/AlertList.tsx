@@ -1,16 +1,16 @@
 import { AlertTriangle, PanelLeftClose, RefreshCw, Search } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import { AlertFilters } from "./AlertFilters";
 import { AlertListItem } from "./AlertListItem";
 import type { AlertEvent, AlertFilter } from "./alert.types";
 
-export function AlertList({ alerts, selectedId, loading, error, search, filter, advancedFilters, onCollapse, onSearch, onFilter, onSelect, onRetry }: {
+export function AlertList({ alerts, selectedId, loading, error, search, filter, advancedFilters, onCollapse, collapseButtonRef, onSearch, onFilter, onSelect, onRetry }: {
   alerts: AlertEvent[]; selectedId: string; loading: boolean; error: boolean; search: string; filter: AlertFilter;
-  advancedFilters?: ReactNode; onCollapse?: () => void;
+  advancedFilters?: ReactNode; onCollapse?: () => void; collapseButtonRef?: RefObject<HTMLButtonElement | null>;
   onSearch: (value: string) => void; onFilter: (value: AlertFilter) => void; onSelect: (id: string) => void; onRetry: () => void;
 }) {
-  return <aside className="alerts-list-panel" aria-label="Danh sách cảnh báo">
-    <div className="alert-list-tools"><button className="alert-list-collapse" onClick={onCollapse} aria-label="Thu gọn danh sách cảnh báo" title="Thu gọn danh sách"><PanelLeftClose /></button>
+  return <aside id="alerts-list-panel" className="alerts-list-panel" aria-label="Danh sách cảnh báo">
+    <div className="alert-list-tools"><button ref={collapseButtonRef} className="alert-list-collapse" onClick={onCollapse} aria-label="Thu gọn danh sách cảnh báo" title="Thu gọn danh sách cảnh báo" aria-expanded="true" aria-controls="alerts-list-panel"><PanelLeftClose /></button>
       <label className="alert-search"><Search /><input value={search} onChange={(event) => onSearch(event.target.value)} placeholder="Tìm cảnh báo..." /></label>
       <AlertFilters value={filter} onChange={onFilter} />
       {advancedFilters}
