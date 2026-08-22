@@ -15,6 +15,6 @@ export function AlertListItem({ alert, selected, onSelect }: { alert: AlertEvent
       <span className="alert-item-preview">{alert.preview}</span>
       <span className={`alert-status status-${alert.status}`}>{statusLabels[alert.status]}</span>
     </span>
-    {alert.unread && <span className="alert-unread" aria-label="Chưa đọc" />}
+    {alert.unread && <span className="alert-unread" aria-label="Chưa xem" />}
   </button>;
 }

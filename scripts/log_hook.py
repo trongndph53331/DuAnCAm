@@ -69,8 +69,32 @@ def transcript_content(payload: dict):
     return content
 
 
-def sync_codex_transcript(path_value: str, log_file: Path) -> int:
-    """Append new user/assistant/tool transcript items, tracked by ordinal."""
+def existing_codex_prompts(log_file: Path, session_id: str) -> set[str]:
+    """Return prompts already persisted for one Codex session."""
+    prompts = set()
+    if not log_file.is_file():
+        return prompts
+    try:
+        with open(log_file, encoding="utf-8") as source:
+            for line in source:
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if (
+                    entry.get("tool") == "codex"
+                    and entry.get("event") == "UserPromptSubmit"
+                    and (not session_id or entry.get("session_id", "") == session_id)
+                    and entry.get("prompt")
+                ):
+                    prompts.add(entry["prompt"])
+    except OSError:
+        pass
+    return prompts
+
+
+def sync_codex_transcript(path_value: str, log_file: Path, session_id: str = "") -> int:
+    """Append missing user prompts from a Codex transcript, tracked by ordinal."""
     transcript = Path(path_value) if path_value else None
     if not transcript or not transcript.is_file():
         return 0
@@ -84,6 +108,7 @@ def sync_codex_transcript(path_value: str, log_file: Path) -> int:
     last_ordinal = int(state.get(state_key, -1))
     imported = []
     max_ordinal = last_ordinal
+    persisted_prompts = existing_codex_prompts(log_file, session_id)
 
     with open(transcript, encoding="utf-8") as source:
         for line in source:
@@ -98,27 +123,20 @@ def sync_codex_transcript(path_value: str, log_file: Path) -> int:
             item_type = payload.get("type", "")
             role = payload.get("role", "")
             entry = None
-            if item_type == "message" and role in ("user", "assistant"):
+            if item_type == "message" and role == "user":
+                prompt = transcript_content(payload)
+                if not prompt or prompt in persisted_prompts:
+                    max_ordinal = max(max_ordinal, ordinal)
+                    continue
                 entry = {
                     "ts": item.get("timestamp", ""), "tool": "codex",
-                    "event": "TranscriptMessage", "role": role,
-                    "content": transcript_content(payload), "ordinal": ordinal,
-                }
-            elif item_type in ("custom_tool_call", "function_call"):
-                entry = {
-                    "ts": item.get("timestamp", ""), "tool": "codex",
-                    "event": "ToolCall", "tool_name": payload.get("name", ""),
-                    "tool_input": payload.get("input") or payload.get("arguments", ""),
-                    "call_id": payload.get("call_id", ""), "ordinal": ordinal,
-                }
-            elif item_type in ("custom_tool_call_output", "function_call_output"):
-                entry = {
-                    "ts": item.get("timestamp", ""), "tool": "codex",
-                    "event": "ToolResult", "tool_output": payload.get("output", ""),
-                    "call_id": payload.get("call_id", ""), "ordinal": ordinal,
+                    "event": "UserPromptSubmit", "role": role,
+                    "prompt": prompt, "ordinal": ordinal,
+                    "session_id": session_id,
                 }
             if entry:
                 imported.append(repair_text(sanitize_payload(entry)))
+                persisted_prompts.add(prompt)
             max_ordinal = max(max_ordinal, ordinal)
 
     if imported:
@@ -304,12 +322,23 @@ def main():
     log_dir.mkdir(exist_ok=True)
     log_file = log_dir / "session.jsonl"
 
-    with open(log_file, "a", encoding="utf-8") as f:
-        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    # Persist Codex prompts immediately. Stop later imports only prompts that
+    # were missing from the direct hook payload, with duplicate protection.
+    should_write = True
+    if tool == "codex" and entry.get("event") == "UserPromptSubmit":
+        prompt = entry.get("prompt", "")
+        should_write = bool(prompt) and prompt not in existing_codex_prompts(
+            log_file, entry.get("session_id", "")
+        )
+    if should_write:
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
     imported = 0
     if tool == "codex":
-        imported = sync_codex_transcript(data.get("transcript_path", ""), log_file)
+        imported = sync_codex_transcript(
+            data.get("transcript_path", ""), log_file, entry.get("session_id", "")
+        )
 
     # Output valid JSON (required by some tools like Gemini)
     print(json.dumps({"status": "logged", "transcript_entries": imported}))

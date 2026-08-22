@@ -1,27 +1,24 @@
 {
+  "description": "AI20K AI usage logging",
   "hooks": {
     "UserPromptSubmit": [
       {
         "hooks": [
           {
-            "name": "log-prompt",
             "type": "command",
-            "command": "bash \"$(git rev-parse --show-toplevel)/scripts/_pyrun.sh\" \"$(git rev-parse --show-toplevel)/scripts/log_hook.py\" --tool=codex",
-            "commandWindows": "cmd.exe /d /c scripts\\_pyrun.cmd scripts\\log_hook.py --tool=codex",
+            "command": "bash scripts/_pyrun.sh scripts/log_hook.py --tool=codex",
             "timeout": 10
           }
         ]
       }
     ],
-    "SessionEnd": [
+    "Stop": [
       {
         "hooks": [
           {
-            "name": "log-stop",
             "type": "command",
-            "command": "bash \"$(git rev-parse --show-toplevel)/scripts/_pyrun.sh\" \"$(git rev-parse --show-toplevel)/scripts/log_hook.py\" --tool=codex",
-            "commandWindows": "cmd.exe /d /c scripts\\_pyrun.cmd scripts\\log_hook.py --tool=codex",
-            "timeout": 3
+            "command": "bash scripts/_pyrun.sh scripts/log_hook.py --tool=codex",
+            "timeout": 10
           }
         ]
       }
