@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Activity, AlertTriangle, BellRing, CheckCircle2, Clock3, Cpu, Gauge, HardDrive, Radio, Server, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, BellRing, Clock3, Cpu, Gauge, HardDrive, Radio, Server, XCircle } from "lucide-react";
 import { getStatistics, type CameraMetric, type StatisticsData, type StatisticsPeriod, type TrendMetric } from "../api/metrics";
 import "./statistics.css";
 
@@ -23,14 +23,18 @@ function Trend({ metric }: { metric: TrendMetric }) {
 }
 
 function Kpi({ icon, label, display, metric, tone = "blue" }: { icon: ReactNode; label: string; display: string; metric: TrendMetric; tone?: string }) {
-  return <article className={`statistics-kpi ${tone}`}><span>{icon}</span><div><strong className={metric.value == null ? "stats-missing" : ""}>{display}</strong><p>{label}</p><Trend metric={metric} /></div></article>;
+  const missing = metric.value == null;
+  return <article className={`statistics-kpi ${tone}`}><span>{icon}</span><div><strong className={missing ? "stats-missing" : ""} title={missing ? "Chưa có đủ dữ liệu trong khoảng thời gian đã chọn" : undefined} tabIndex={missing ? 0 : undefined}>{display}</strong><p>{label}</p><Trend metric={metric} /></div></article>;
 }
 
 function AlertChart({ rows, filter, bucketUnit }: { rows: StatisticsData["alert_timeline"]; filter: string; bucketUnit: StatisticsData["alert_bucket"]["unit"] }) {
   const selected = rows.filter(row => filter === "all" || row.alert_type === filter);
   const points = Array.from(new Set(selected.map(row => row.bucket_start))).map(bucketStart => selected.filter(row => row.bucket_start === bucketStart).reduce((sum, row) => ({ bucketStart, total: sum.total + row.total, confirmed: sum.confirmed + row.confirmed, falseAlarms: sum.falseAlarms + row.false_alarms }), { bucketStart, total: 0, confirmed: 0, falseAlarms: 0 }));
   const max = Math.max(1, ...points.map(point => point.total));
+  const sampleCount = points.reduce((sum, point) => sum + point.total, 0);
   const label = (timestamp: string) => new Date(timestamp).toLocaleString("vi-VN", bucketUnit === "hour" ? { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Ho_Chi_Minh" } : { day: "2-digit", month: "2-digit", timeZone: "Asia/Ho_Chi_Minh" });
+  if (sampleCount === 0) return <div className="statistics-empty chart-empty">Chưa có cảnh báo trong khoảng thời gian đã chọn.</div>;
+  if (sampleCount < 3) return <div className="statistics-empty chart-empty">Dữ liệu còn quá ít để thể hiện xu hướng đáng tin cậy ({sampleCount} cảnh báo).</div>;
   return <div className={`alert-bars ${bucketUnit}`} role="img" aria-label={bucketUnit === "hour" ? "Cảnh báo theo giờ" : "Cảnh báo theo ngày"}>{points.map(point => <div className="alert-bar-column" key={point.bucketStart}><b>{point.total}</b><div className="stacked-bar"><i className="confirmed" style={{ height: `${point.confirmed / max * 100}%` }} /><i className="false" style={{ height: `${point.falseAlarms / max * 100}%` }} /><i className="unreviewed" style={{ height: `${Math.max(0, point.total - point.confirmed - point.falseAlarms) / max * 100}%` }} /></div><time dateTime={point.bucketStart}>{label(point.bucketStart)}</time></div>)}</div>;
 }
 
@@ -66,6 +70,7 @@ export default function StatisticsPage() {
   const [custom, setCustom] = useState({ start: "", end: "" });
   const [filter, setFilter] = useState("all");
   const [performanceCamera, setPerformanceCamera] = useState("");
+  const [cameraSort, setCameraSort] = useState<"alerts" | "name">("alerts");
   const [data, setData] = useState<StatisticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -75,21 +80,30 @@ export default function StatisticsPage() {
     getStatistics(period, custom.start, custom.end).then(setData).catch((reason: Error) => setError(reason.message)).finally(() => setLoading(false));
   }, [period, custom.start, custom.end]);
   const cameraMax = useMemo(() => Math.max(1, ...(data?.camera_distribution.map(item => item.alert_count) ?? [1])), [data]);
+  const sortedCameraDistribution = useMemo(() => [...(data?.camera_distribution ?? [])].sort((a, b) => cameraSort === "alerts" ? b.alert_count - a.alert_count : a.name.localeCompare(b.name, "vi")), [cameraSort, data]);
   const k = data?.kpis;
   const performanceCameras = data?.performance_series.filter(item => item.sample_count > 0) ?? [];
   const selectedPerformanceCamera = performanceCameras.some(item => item.camera_id === performanceCamera) ? performanceCamera : performanceCameras[0]?.camera_id ?? "";
   const falseAlarmEmpty = k?.false_alerts.value === 0 ? "Chưa có cảnh báo nào được đánh dấu là báo động giả." : "Có báo động giả nhưng chưa có ghi chú nguyên nhân.";
+  const totalAlerts = Number(k?.total_alerts.value ?? 0);
+  const unconfirmedAlerts = Number(k?.unconfirmed_alerts.value ?? 0);
+  const insight = totalAlerts === 0
+    ? "Chưa có cảnh báo trong khoảng thời gian đã chọn."
+    : unconfirmedAlerts === totalAlerts
+      ? `${number.format(totalAlerts)} cảnh báo trong kỳ, tất cả chưa được xác nhận.`
+      : `${number.format(totalAlerts)} cảnh báo trong kỳ, ${number.format(unconfirmedAlerts)} chưa được xác nhận.`;
   return <section className="statistics-page">
     <header className="statistics-header"><div><h1>Thống kê</h1><p>Cảnh báo lịch sử và telemetry từ runtime hiện tại.</p></div><div className="statistics-range">{periods.map(([key, label]) => <button className={period === key ? "active" : ""} key={key} onClick={() => setPeriod(key)}>{label}</button>)}</div></header>
     {period === "custom" && <div className="custom-range"><label>Từ ngày<input type="date" value={custom.start} onChange={event => setCustom({ ...custom, start: event.target.value })} /></label><label>Đến ngày<input type="date" min={custom.start} value={custom.end} onChange={event => setCustom({ ...custom, end: event.target.value })} /></label></div>}
     {error && <div className="statistics-error"><AlertTriangle />{error}</div>}
     {loading && !data && <div className="statistics-loading">Đang tổng hợp dữ liệu…</div>}
     {data && k && <>
-      <div className="statistics-kpis"><Kpi icon={<BellRing />} label="Tổng cảnh báo" display={value(k.total_alerts)} metric={k.total_alerts} /><Kpi icon={<CheckCircle2 />} label="Đã xác nhận đúng" display={value(k.true_alerts)} metric={k.true_alerts} tone="green" /><Kpi icon={<XCircle />} label="Báo động giả" display={value(k.false_alerts)} metric={k.false_alerts} tone="red" /><Kpi icon={<AlertTriangle />} label="Chưa xác nhận" display={value(k.unconfirmed_alerts)} metric={k.unconfirmed_alerts} tone="orange" /><Kpi icon={<Gauge />} label="Tỷ lệ báo động giả" display={k.false_alarm_rate.value == null ? "—" : `${number.format(k.false_alarm_rate.value * 100)}%`} metric={k.false_alarm_rate} /><Kpi icon={<Clock3 />} label="Phản hồi đầu tiên" display={formatResponseTime(k.average_response_ms.value)} metric={k.average_response_ms} /></div>
+      <div className="statistics-insight" role="status"><BellRing /><strong>{insight}</strong></div>
+      <div className="statistics-kpis"><Kpi icon={<BellRing />} label="Tổng cảnh báo" display={value(k.total_alerts)} metric={k.total_alerts} /><Kpi icon={<AlertTriangle />} label="Chưa xác nhận" display={value(k.unconfirmed_alerts)} metric={k.unconfirmed_alerts} tone="orange" /><Kpi icon={<Gauge />} label="Tỷ lệ báo động giả" display={k.false_alarm_rate.value == null ? "—" : `${number.format(k.false_alarm_rate.value * 100)}%`} metric={k.false_alarm_rate} /><Kpi icon={<Clock3 />} label="Phản hồi đầu tiên" display={formatResponseTime(k.average_response_ms.value)} metric={k.average_response_ms} /></div>
       <div className="statistics-grid"><article className="statistics-card"><div className="statistics-card-heading"><div><h2>Cảnh báo theo thời gian</h2><p>Phân loại theo hành động người dùng mới nhất.</p></div><div className="chart-toggle">{[["all", "Tất cả"], ["fall", "Té ngã"], ["unknown_person", "Người lạ"]].map(([key, label]) => <button className={filter === key ? "active" : ""} key={key} onClick={() => setFilter(key)}>{label}</button>)}</div></div><div className="chart-legend"><span><i className="confirmed" />Đúng</span><span><i className="false" />Giả</span><span><i className="unreviewed" />Chưa xác nhận</span></div><AlertChart rows={data.alert_timeline} filter={filter} bucketUnit={data.alert_bucket.unit} /></article>
-        <div className="statistics-side-stack"><article className="statistics-card"><div className="statistics-card-heading"><div><h2>Phân bổ theo camera</h2><p>Số cảnh báo và tỷ lệ giả trên các cảnh báo đã review.</p></div></div><div className="camera-stats">{data.camera_distribution.map(camera => <div key={camera.id}><header><span><strong>{camera.name}</strong><small>{camera.location || "Chưa đặt vị trí"}</small></span><b>{camera.alert_count} · {camera.false_alarm_rate == null ? "—" : `${number.format(camera.false_alarm_rate * 100)}% giả`}</b></header><div><i style={{ width: `${camera.alert_count / cameraMax * 100}%` }} /></div></div>)}</div></article>
+        <div className="statistics-side-stack"><article className="statistics-card"><div className="statistics-card-heading"><div><h2>Phân bổ theo camera</h2><p>Số cảnh báo và tỷ lệ giả trên các cảnh báo đã review.</p></div><select aria-label="Sắp xếp camera" value={cameraSort} onChange={event => setCameraSort(event.target.value as "alerts" | "name")}><option value="alerts">Nhiều cảnh báo nhất</option><option value="name">Tên camera</option></select></div><div className="camera-stats">{sortedCameraDistribution.map(camera => <div key={camera.id}><header><span><strong>{camera.name}</strong><small>{camera.location || "Chưa đặt vị trí"}</small></span><b>{camera.alert_count} · {camera.false_alarm_rate == null ? <span className="stats-missing" title="Chưa có cảnh báo đã được đánh giá" tabIndex={0}>—</span> : `${number.format(camera.false_alarm_rate * 100)}% giả`}</b></header><div><i style={{ width: `${camera.alert_count / cameraMax * 100}%` }} /></div></div>)}</div></article>
           <article className="statistics-card"><div className="statistics-card-heading"><div><h2>Nguyên nhân báo động giả</h2><p>Ghi chú từ hành động false alarm mới nhất.</p></div></div>{data.false_alarm_reasons.length ? <ol className="reason-list">{data.false_alarm_reasons.map(item => <li key={item.note}><span>{item.note}</span><b>{item.count}</b></li>)}</ol> : <div className="statistics-empty reason-empty">{falseAlarmEmpty}</div>}</article></div></div>
-      <section className="performance-section"><div className="performance-title"><Activity /><div><h2>Hiệu năng vận hành</h2><p>Card camera là realtime; biểu đồ xu hướng dùng mẫu lịch sử đã lưu.</p></div></div>
+      <section className="performance-section"><div className="performance-title"><Activity /><div><h2>Hiệu năng hệ thống</h2><p>Telemetry kỹ thuật từ runtime hiện tại và mẫu lịch sử đã lưu, tách biệt với số liệu sản phẩm phía trên.</p></div></div>
         <div className="hub-card"><header><Server /><div><h3>Local Hub</h3><p>Telemetry backend process và host</p></div><time>{data.hub_metrics ? `${vietnamDateTime(data.hub_metrics.measured_at)}${data.hub_metrics.is_stale ? " · mẫu cũ" : ""}` : "Chưa có mẫu"}</time></header><div><span><Cpu /><small>CPU backend process</small><strong>{data.hub_metrics?.process_cpu_percent == null ? "—" : `${number.format(data.hub_metrics.process_cpu_percent)}%`}</strong></span><span><Server /><small>RAM backend process</small><strong>{data.hub_metrics?.process_rss_mb == null ? "—" : `${number.format(data.hub_metrics.process_rss_mb)} MB`}</strong></span><span><Gauge /><small>RAM host</small><strong>{data.hub_metrics?.host_memory_used_percent == null ? "—" : `${number.format(data.hub_metrics.host_memory_used_percent)}%`}</strong></span><span><HardDrive /><small>Đĩa host</small><strong>{data.hub_metrics?.disk_used_percent == null ? "—" : `${number.format(data.hub_metrics.disk_used_percent)}%`}</strong></span></div></div>
         {data.threshold_alerts.length > 0 && <div className="operational-warnings">{data.threshold_alerts.map(alert => <div className="threshold-banner" key={`${alert.scope}-${alert.id}`}><AlertTriangle /><span><strong>{alert.name}</strong><small>{alert.reasons.join(" · ")}</small></span></div>)}</div>}
         <div className="device-grid">{data.camera_metrics.map(camera => <CameraCard camera={camera} key={camera.id} />)}</div>

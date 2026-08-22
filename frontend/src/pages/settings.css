@@ -7,6 +7,38 @@
 .camera-setting-row{grid-template-columns:34px minmax(180px,1fr) auto minmax(180px,auto)}.camera-setting-toggles{display:flex;align-items:center;gap:14px}.camera-setting-toggles label{display:flex;align-items:center;gap:6px;color:#64748b;font-size:9px;font-weight:700}@media(max-width:700px){.camera-setting-toggles{grid-column:2/4;justify-content:flex-start}.camera-setting-row{grid-template-columns:32px minmax(0,1fr) auto}}
 .appearance-options{margin-top:16px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.appearance-options>button{min-height:132px;padding:16px;border:1px solid var(--border-default);border-radius:var(--radius-lg);background:var(--bg-surface);color:var(--text-primary);display:grid;grid-template-columns:42px minmax(0,1fr) 24px;align-items:start;gap:12px;text-align:left;cursor:pointer;transition:background var(--transition-fast),border-color var(--transition-fast),box-shadow var(--transition-fast),transform var(--transition-fast)}.appearance-options>button:hover{background:var(--interactive-hover);border-color:var(--border-strong);box-shadow:var(--shadow-sm)}.appearance-options>button:active{transform:translateY(1px)}.appearance-options>button.selected{background:var(--primary-subtle);border-color:var(--primary);box-shadow:0 0 0 1px var(--primary)}.appearance-options>button>span:first-child{width:42px;height:42px;border-radius:var(--radius-md);background:var(--bg-subtle);color:var(--primary);display:grid;place-items:center}.appearance-options>button>span:first-child svg{width:21px}.appearance-options strong,.appearance-options small{display:block}.appearance-options strong{font-size:14px}.appearance-options small{margin-top:6px;color:var(--text-secondary);font-size:11px;line-height:1.5}.appearance-options i{width:22px;height:22px;border:1px solid var(--border-strong);border-radius:var(--radius-full);display:grid;place-items:center;color:var(--text-inverse);background:var(--bg-surface)}.appearance-options .selected i{border-color:var(--primary);background:var(--primary)}.appearance-options i svg{width:13px}@media(max-width:900px){.appearance-options{grid-template-columns:1fr}}@media(max-width:700px){.appearance-options>button{min-height:100px}}
 
+/* Phase 5: one document scroller, semantic theme, and persistent save feedback. */
+.settings-page{height:auto;min-height:100%;overflow:visible;color:var(--text-primary)}
+.settings-shell{min-height:0;overflow:visible;border-color:var(--border-default);background:var(--bg-surface)}
+.settings-content,.settings-scroll-content{height:auto;min-height:0;overflow:visible}
+.settings-tabs{border-color:var(--border-default);background:var(--bg-subtle)}
+.settings-tabs button{color:var(--text-secondary)}
+.settings-tabs button:hover{background:var(--interactive-hover);color:var(--text-primary)}
+.settings-tabs button.active{background:var(--primary-subtle);color:var(--primary)}
+.settings-section-card,.caregiver-panel,.permission-panel,.settings-modal{border-color:var(--border-default);background:var(--bg-surface);color:var(--text-primary)}
+.settings-heading p,.section-page-heading p,.settings-card-heading p,.setting-inline-row small,.notification-toggle-row small,.camera-setting-row small,.person-setting-row small{color:var(--text-secondary)}
+.settings-form-grid input,.settings-modal input,.settings-modal select,.settings-modal textarea,.setting-inline-row select,.sensitive-hours input,.sensitive-hours select,.quiet-hours input{border-color:var(--border-default);background:var(--bg-subtle);color:var(--text-primary)}
+.settings-data-list,.camera-setting-row,.person-setting-row,.notification-toggle-row{border-color:var(--border-default)}
+.sensitive-hours,.user-table-head,.last-admin-note,.permission-panel>footer{background:var(--bg-subtle);color:var(--text-secondary)}
+.notification-options>div{border-color:var(--border-default);background:var(--bg-surface)}
+.permission-toggle{background:var(--border-strong)}
+.permission-toggle.on{background:var(--primary)}
+.caregiver-list,.permission-groups{overflow-y:visible}
+.threshold-help{margin:10px 0 0;color:var(--text-secondary);font-size:11px;line-height:1.55}
+.threshold-warning{margin-top:10px;padding:10px 12px;border:1px solid var(--warning-border,#f1b95c);border-radius:var(--radius-md);background:var(--warning-subtle,#fff7df);color:var(--warning-text,#8a5400);display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700}
+.threshold-warning svg{width:17px;flex:0 0 auto}
+.settings-save-bar{position:sticky;z-index:20;bottom:0;min-height:58px;margin:0 20px 18px;padding:9px 12px;border:1px solid var(--border-default);border-radius:var(--radius-lg);background:color-mix(in srgb,var(--bg-surface) 94%,transparent);box-shadow:var(--shadow-lg);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--text-secondary);font-size:12px;font-weight:700}
+.settings-save-bar.dirty{border-color:var(--primary);color:var(--text-primary)}
+.settings-save-bar.saved{border-color:var(--success,#168743);color:var(--success,#168743)}
+.settings-save-bar.error{border-color:var(--danger,#dc3030);color:var(--danger,#dc3030)}
+.settings-save-bar button{min-height:40px;padding:0 14px;border:0;border-radius:var(--radius-md);background:var(--primary);color:var(--text-inverse);display:flex;align-items:center;gap:7px;font-weight:750;cursor:pointer}
+.settings-save-bar button:disabled{opacity:.5;cursor:not-allowed}
+.settings-save-bar button svg{width:16px}
+.settings-save-bar .spin{animation:settingsSpin 1s linear infinite}
+@keyframes settingsSpin{to{transform:rotate(360deg)}}
+.settings-page button:focus-visible,.settings-page input:focus-visible,.settings-page select:focus-visible,.settings-page textarea:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px}
+@media(max-width:700px){.settings-page{padding-bottom:calc(96px + env(safe-area-inset-bottom))}.settings-shell{overflow:visible}.settings-content{height:auto;overflow:visible}.settings-tabs{overflow-x:auto}.settings-save-bar{bottom:calc(70px + env(safe-area-inset-bottom));margin:0 2px 14px;min-height:56px}.settings-save-bar button{min-width:44px;min-height:44px}.camera-setting-toggles{grid-column:2/4;display:flex;flex-wrap:wrap;gap:10px}.camera-setting-toggles label{min-height:44px;display:flex;align-items:center;gap:7px}}
+
 /* Permissions user picker only. */
 .permission-view .caregiver-panel{color:var(--text-primary);background:var(--bg-surface);border-color:var(--border-default)}
 .permission-view .caregiver-list{scrollbar-color:var(--border-strong) var(--bg-subtle)}
