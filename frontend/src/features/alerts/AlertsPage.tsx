@@ -5,6 +5,7 @@ import { fetchAlerts, markAlertRead, updateAlertStatus } from "./alertService";
 import type { AlertEvent, AlertFilter } from "./alert.types";
 import "./alerts.css";
 import "./snapshotApi.css";
+import "./alertsTheme.css";
 
 export default function AlertsPage() {
   const routeAlertId = () => decodeURIComponent(window.location.pathname.split("/")[2] ?? "");

@@ -1,0 +1,49 @@
+/* Scoped semantic theme layer for /alerts. */
+.alerts-page,.alerts-workspace,.alerts-list-panel,.alert-conversation,.alert-product-detail,.chat-message-list,.alerts-empty{color:var(--text-primary);background:var(--bg-app)}
+.alerts-workspace{border-color:var(--border-default);box-shadow:var(--shadow-md)}
+.alerts-list-panel,.alert-list-tools,.conversation-header,.chat-input-wrap,.copilot-suggestions,.quick-action-list{color:var(--text-primary);background:var(--bg-surface);border-color:var(--divider)}
+
+.alert-search,.alert-filter-chips button,.alert-list-state button,.conversation-more,.conversation-back,.camera-preview-bar button,.need-help-grid button,.quick-action-list button,.copilot-suggestions>div:last-child button,.copilot-composer .composer-close,.modal-close,.modal-actions button,.alert-product-actions button,.hero-false{color:var(--text-secondary);background:var(--bg-elevated);border-color:var(--border-default)}
+.alert-search input,.chat-input-wrap textarea,.false-alarm-modal textarea{color:var(--text-primary);background:transparent;border-color:var(--border-default);caret-color:var(--primary)}
+.alert-search input::placeholder,.chat-input-wrap textarea::placeholder,.false-alarm-modal textarea::placeholder{color:var(--text-muted)}
+.alert-search:focus-within,.chat-input-wrap textarea:focus,.false-alarm-modal textarea:focus{border-color:var(--focus-ring);box-shadow:0 0 0 3px color-mix(in srgb,var(--focus-ring) 25%,transparent)}
+
+.alert-filter-chips button:hover:not(:disabled),.alert-list-state button:hover:not(:disabled),.conversation-more:hover:not(:disabled),.conversation-back:hover:not(:disabled),.camera-preview-bar button:hover:not(:disabled),.need-help-grid button:hover:not(:disabled),.quick-action-list button:hover:not(:disabled),.copilot-suggestions>div:last-child button:hover:not(:disabled),.copilot-composer .composer-close:hover:not(:disabled),.modal-close:hover:not(:disabled),.modal-actions button:hover:not(:disabled),.alert-product-actions button:hover:not(:disabled),.hero-false:hover:not(:disabled){color:var(--text-primary);background:var(--interactive-hover);border-color:var(--border-strong)}
+.alert-filter-chips button.active,.alert-filter-chips button.active:hover{color:var(--primary);background:var(--primary-subtle);border-color:var(--primary)}
+
+.alert-list-item{color:var(--text-primary);background:var(--bg-surface)}
+.alert-list-item:hover{background:var(--interactive-hover)}
+.alert-list-item.selected,.alert-list-item.selected:hover{color:var(--text-primary);background:var(--interactive-active);border-color:var(--primary)}
+.alert-item-title time,.alert-item-preview,.alert-list-state,.alerts-empty,.conversation-header small,.alert-product-copy>p{color:var(--text-muted)}
+.alert-item-meta{color:var(--text-secondary)}
+.alert-list-state strong{color:var(--text-primary)}
+.alerts-page .status-pending{color:var(--primary);background:var(--primary-subtle)}
+.alerts-page .status-checking{color:var(--warning);background:var(--warning-subtle)}
+.alerts-page .status-resolved,.alerts-page .status-safe{color:var(--success);background:var(--success-subtle)}
+.alerts-page .status-false_alarm{color:var(--text-secondary);background:var(--bg-subtle)}
+.alerts-page .status-need_help{color:var(--danger);background:var(--danger-subtle)}
+.severity-info .alert-list-icon{color:var(--info);background:var(--info-subtle)}
+.severity-medium .alert-list-icon{color:var(--warning);background:var(--warning-subtle)}
+.severity-critical .alert-list-icon{color:var(--danger);background:var(--danger-subtle)}
+
+.event-detail-card,.event-detail-card.event-hero,.alert-product-copy,.camera-preview-card,.chat-bubble,.typing-indicator,.alert-modal,.snapshot-modal,.chat-message-list .copilot-suggestions{color:var(--text-primary);background:var(--bg-surface);border-color:var(--border-default);box-shadow:var(--shadow-sm)}
+.event-case-header h3,.alert-product-copy h2,.alert-product-copy dd{color:var(--text-primary)}
+.event-case-header>div>span,.analysis-collapsible>p{color:var(--text-secondary)}
+.event-kicker,.analysis-toggle,.copilot-suggestions>div:first-child button{color:var(--primary)}
+.hero-ai-summary,.event-ai-analysis,.event-insight,.alert-product-copy dl div{background:var(--bg-subtle)}
+.hero-ai-summary p,.event-ai-analysis p,.event-insight p{color:var(--text-secondary)}
+.analysis-collapsible{border-color:var(--divider)}
+.event-inline-insights>span,.reason-options label{color:var(--text-primary);background:var(--bg-elevated);border-color:var(--border-default)}
+.event-inline-insights small,.alert-product-copy dt{color:var(--text-muted)}
+.event-inline-insights strong{color:var(--text-primary)}
+
+.alert-product-actions button:nth-child(2),.modal-actions .confirm-safe,.hero-safe{color:var(--text-inverse);background:var(--success);border-color:var(--success)}
+.alert-product-actions button:nth-child(2):hover:not(:disabled),.modal-actions .confirm-safe:hover:not(:disabled),.hero-safe:hover:not(:disabled){color:var(--text-inverse);background:color-mix(in srgb,var(--success) 86%,black);border-color:var(--success)}
+.hero-safe.is-complete{color:var(--success);background:var(--success-subtle);border-color:var(--success)}
+.alert-product-actions button:disabled,.hero-primary-actions button:disabled,.quick-action-list button:disabled{opacity:.55}
+.alert-modal-backdrop,.snapshot-modal-backdrop{background:var(--overlay)}
+
+/* Evidence pixels are theme-independent. */
+.alerts-page :where(img,video,canvas),.snapshot-modal :where(img,video,canvas){filter:none!important;mix-blend-mode:normal;color-scheme:only light}
+.alert-list-scroll,.chat-message-list,.alert-product-detail,.alert-filter-chips,.quick-action-list{scrollbar-color:var(--border-strong) var(--bg-subtle)}
+@media(max-width:767px){.hero-primary-actions{background:color-mix(in srgb,var(--bg-surface) 94%,transparent)}}
