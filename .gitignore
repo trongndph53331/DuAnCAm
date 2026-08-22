@@ -117,6 +117,7 @@ SDA-GCN/**/*.mlpackage
 # Local AI/Codex logs
 .ai-log/*.jsonl
 .ai-log/archive/
+.ai-log/.codex-import-state.json
 
 # -----------------------------------------------------------------------------
 # Docker local overrides

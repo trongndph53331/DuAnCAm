@@ -5,12 +5,132 @@ Reads JSON from stdin, normalizes to common format, appends to .ai-log/session.j
 """
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 VN_TZ = timezone(timedelta(hours=7))
+MOJIBAKE_MARKERS = ("Ã", "Â", "â€", "â€œ", "â€™", "ðŸ", "Sá»", "Ä‘", "Æ°")
+DATA_URL_RE = re.compile(r"data:((?:image|audio)/[^;,\s]+);base64,[A-Za-z0-9+/=_-]+")
+
+
+def repair_text(value):
+    """Repair UTF-8 text that was decoded once with the Windows code page."""
+    if isinstance(value, list):
+        return [repair_text(item) for item in value]
+    if isinstance(value, dict):
+        return {key: repair_text(item) for key, item in value.items()}
+    if not isinstance(value, str) or not any(marker in value for marker in MOJIBAKE_MARKERS):
+        return value
+    repaired = value
+    for _ in range(2):
+        try:
+            candidate = repaired.encode("cp1252").decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            break
+        if sum(candidate.count(marker) for marker in MOJIBAKE_MARKERS) >= sum(
+            repaired.count(marker) for marker in MOJIBAKE_MARKERS
+        ):
+            break
+        repaired = candidate
+    return repaired
+
+
+def sanitize_payload(value):
+    """Keep transcript text/metadata but omit embedded binary data URLs."""
+    if isinstance(value, list):
+        return [sanitize_payload(item) for item in value]
+    if isinstance(value, dict):
+        cleaned = {}
+        for key, item in value.items():
+            if key in ("image_url", "audio_url") and isinstance(item, str) and item.startswith("data:"):
+                media_type = item[5:].split(";", 1)[0]
+                cleaned[key] = f"[embedded {media_type} omitted]"
+            else:
+                cleaned[key] = sanitize_payload(item)
+        return cleaned
+    if isinstance(value, str):
+        return DATA_URL_RE.sub(lambda match: f"[embedded {match.group(1)} omitted]", value)
+    return value
+
+
+def transcript_content(payload: dict):
+    content = payload.get("content", "")
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, dict):
+                text = item.get("text") or item.get("input_text") or item.get("output_text")
+                if text:
+                    parts.append(text)
+        return "\n".join(parts)
+    return content
+
+
+def sync_codex_transcript(path_value: str, log_file: Path) -> int:
+    """Append new user/assistant/tool transcript items, tracked by ordinal."""
+    transcript = Path(path_value) if path_value else None
+    if not transcript or not transcript.is_file():
+        return 0
+
+    state_file = log_file.parent / ".codex-import-state.json"
+    try:
+        state = json.loads(state_file.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        state = {}
+    state_key = str(transcript.resolve())
+    last_ordinal = int(state.get(state_key, -1))
+    imported = []
+    max_ordinal = last_ordinal
+
+    with open(transcript, encoding="utf-8") as source:
+        for line in source:
+            try:
+                item = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            ordinal = int(item.get("ordinal", -1))
+            if ordinal <= last_ordinal or item.get("type") != "response_item":
+                continue
+            payload = item.get("payload", {})
+            item_type = payload.get("type", "")
+            role = payload.get("role", "")
+            entry = None
+            if item_type == "message" and role in ("user", "assistant"):
+                entry = {
+                    "ts": item.get("timestamp", ""), "tool": "codex",
+                    "event": "TranscriptMessage", "role": role,
+                    "content": transcript_content(payload), "ordinal": ordinal,
+                }
+            elif item_type in ("custom_tool_call", "function_call"):
+                entry = {
+                    "ts": item.get("timestamp", ""), "tool": "codex",
+                    "event": "ToolCall", "tool_name": payload.get("name", ""),
+                    "tool_input": payload.get("input") or payload.get("arguments", ""),
+                    "call_id": payload.get("call_id", ""), "ordinal": ordinal,
+                }
+            elif item_type in ("custom_tool_call_output", "function_call_output"):
+                entry = {
+                    "ts": item.get("timestamp", ""), "tool": "codex",
+                    "event": "ToolResult", "tool_output": payload.get("output", ""),
+                    "call_id": payload.get("call_id", ""), "ordinal": ordinal,
+                }
+            if entry:
+                imported.append(repair_text(sanitize_payload(entry)))
+            max_ordinal = max(max_ordinal, ordinal)
+
+    if imported:
+        with open(log_file, "a", encoding="utf-8") as target:
+            for entry in imported:
+                target.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    if max_ordinal > last_ordinal:
+        state[state_key] = max_ordinal
+        temporary = state_file.with_suffix(".tmp")
+        temporary.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
+        os.replace(temporary, state_file)
+    return len(imported)
 
 
 def git(cmd):
@@ -174,6 +294,7 @@ def main():
     except json.JSONDecodeError:
         sys.exit(0)
 
+    data = repair_text(data)
     tool = detect_tool(data)
     entry = normalize(data, tool)
     if not entry:
@@ -186,8 +307,12 @@ def main():
     with open(log_file, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
+    imported = 0
+    if tool == "codex":
+        imported = sync_codex_transcript(data.get("transcript_path", ""), log_file)
+
     # Output valid JSON (required by some tools like Gemini)
-    print(json.dumps({"status": "logged"}))
+    print(json.dumps({"status": "logged", "transcript_entries": imported}))
 
 
 if __name__ == "__main__":
