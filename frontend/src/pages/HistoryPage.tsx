@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle, CalendarDays, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3,
-  Eye, History, Image, MapPin, PersonStanding, RefreshCw, RotateCcw, Search, ShieldAlert, User,
+  Eye, History, Image, MapPin, PersonStanding, RefreshCw, RotateCcw, Search, ShieldAlert, SlidersHorizontal, User,
   UserRoundCheck, UserRoundX, UsersRound, X,
 } from "lucide-react";
 import "./history.css";
@@ -245,6 +245,7 @@ export default function HistoryPage() {
   const [pageSize, setPageSize] = useState(20);
   const [selected, setSelected] = useState<HistoryEvent | null>(null);
   const [lightboxMedia, setLightboxMedia] = useState<HistoryMedia | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const loadHistory = () => { setLoading(true); setLoadError(false); getHistory().then((items) => setEvents(items as HistoryEvent[])).catch(() => setLoadError(true)).finally(() => setLoading(false)); };
   useEffect(loadHistory, []);
 
@@ -297,7 +298,8 @@ export default function HistoryPage() {
       <div className="history-total"><History /><span><strong>{filtered.length}</strong><small>sự kiện phù hợp</small></span></div>
     </div>
 
-    <section className="history-filter-panel" aria-label="Bộ lọc lịch sử">
+    <div className="history-filter-summary"><button onClick={()=>setFiltersOpen(value=>!value)} aria-expanded={filtersOpen}><SlidersHorizontal/> Bộ lọc nâng cao</button><div className="history-filter-chips"><span>{range === "today" ? "Hôm nay" : range === "30d" ? "30 ngày qua" : range === "custom" ? "Tùy chọn" : "7 ngày qua"}</span>{kind!=="all"&&<span>{kind==="fall_suspected"?"Nghi ngờ té ngã":"Phát hiện người"}</span>}{cameraId!=="all"&&<span>{cameras.find(item=>item.id===cameraId)?.name}</span>}{status!=="all"&&<span>{statusLabels[status as AlertStatus]}</span>}{person!=="all"&&<span>{person==="unknown"?"Người lạ":persons.find(item=>item.id===person)?.name}</span>}</div></div>
+    <section className={`history-filter-panel ${filtersOpen ? "open" : ""}`} aria-label="Bộ lọc lịch sử">
       <div className="history-filters">
         <div className="history-search"><Search /><input value={search} onChange={(e) => changeFilter(setSearch, e.target.value)} placeholder="Tìm người, camera..." aria-label="Tìm kiếm lịch sử" />{search && <button onClick={() => changeFilter(setSearch, "")} aria-label="Xoá tìm kiếm"><X /></button>}</div>
         <FilterDropdown label="Khoảng thời gian" icon={CalendarDays} value={range} onChange={(value) => changeFilter(setRange, value)} options={[{ value: "today", label: "Hôm nay" }, { value: "7d", label: "7 ngày qua" }, { value: "30d", label: "30 ngày qua" }, { value: "custom", label: "Tuỳ chọn" }]} />
@@ -311,22 +313,19 @@ export default function HistoryPage() {
     </section>
 
     {filtered.length ? <>
-      <div className="history-list-heading"><div><span className="live-dot" /> Mới nhất trước</div><small>Sắp xếp theo occurred_at DESC</small></div>
+      <div className="history-list-heading"><div><span className="live-dot" /> Mới nhất trước</div></div>
       <div className="history-table-wrap">
         <table className="history-table">
-          <thead><tr><th>Ảnh</th><th>Thời gian</th><th>Loại sự kiện</th><th>Đối tượng</th><th>Camera / Vị trí</th><th className="confidence-column">Điểm AI</th><th>Trạng thái</th><th>Mức độ</th><th><span className="sr-only">Hành động</span></th></tr></thead>
+          <thead><tr><th>Ảnh</th><th>Thời gian</th><th>Sự kiện</th><th>Camera / Vị trí</th><th>Trạng thái</th><th><span className="sr-only">Hành động</span></th></tr></thead>
           <tbody>{pageItems.map((event) => {
             const media = event.media.find((item) => item.subjectType === "scene") ?? event.media[0];
             const critical = event.alert?.severity === "critical" && event.alert.status === "open";
             return <tr key={event.id} className={`${critical ? "critical-open" : ""} ${event.verdict === "false_positive" ? "false-positive-row" : ""}`} onClick={() => setSelected(event)} tabIndex={0} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setSelected(event)}>
               <td><div className="table-thumb"><HistoryThumbnail media={media} kind={event.kind} /></div></td>
               <td><time title={fullTime(event.occurredAt)}>{tableTime(event.occurredAt)}</time><small>{relativeTime(event.occurredAt)}</small></td>
-              <td><span className={`event-kind table-kind ${event.kind === "fall_suspected" ? "fall" : "person"}`}>{event.kind === "fall_suspected" ? <AlertTriangle /> : <User />}{event.kind === "fall_suspected" ? "Nghi ngờ té ngã" : "Phát hiện người"}</span></td>
-              <td><strong className={event.unknown ? "unknown-person" : ""}>{event.person?.name ?? "Người lạ"}</strong>{event.verdict && <span className={`table-verdict ${event.verdict}`}>{event.verdict === "false_positive" ? "Báo động giả" : "Đã xác nhận đúng"}</span>}</td>
+              <td><span className={`event-kind table-kind ${event.kind === "fall_suspected" ? "fall" : "person"}`}>{event.kind === "fall_suspected" ? <AlertTriangle /> : <User />}{event.kind === "fall_suspected" ? "Nghi ngờ té ngã" : "Phát hiện người"}</span><strong className={event.unknown ? "unknown-person" : ""}>{event.person?.name ?? "Người lạ"}</strong>{event.alert&&<span className={`severity-dot ${event.alert.severity}`}><i/>{severityLabels[event.alert.severity]}</span>}</td>
               <td><strong>{event.cameraName}</strong><small>{event.location}</small></td>
-              <td className="confidence-column"><div className="confidence-value"><span><i style={{ width: `${event.confidence * 100}%` }} /></span><strong>{Math.round(event.confidence * 100)}%</strong></div></td>
               <td>{event.alert ? <span className={`alert-status ${event.alert.status}`}>{statusLabels[event.alert.status]}</span> : <span className="alert-status not-applicable">Không áp dụng</span>}</td>
-              <td>{event.alert ? <span className={`severity-dot ${event.alert.severity}`} title={severityLabels[event.alert.severity]}><i />{severityLabels[event.alert.severity]}</span> : <span className="severity-dot not-applicable"><i />—</span>}</td>
               <td><button className="row-action" title="Xem chi tiết" aria-label={`Xem chi tiết ${event.id}`} onClick={(e) => { e.stopPropagation(); setSelected(event); }}><Eye /></button></td>
             </tr>;
           })}</tbody>

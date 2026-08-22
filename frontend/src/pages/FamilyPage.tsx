@@ -1,4 +1,4 @@
-import { AlertTriangle, Camera, Check, Image, Plus, RefreshCw, Search, ShieldCheck, Trash2, UsersRound, X } from "lucide-react";
+import { AlertTriangle, Camera, Check, HelpCircle, Image, MoreHorizontal, Plus, RefreshCw, Search, ShieldCheck, Trash2, UsersRound, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { addFace, createPerson, deleteFace, getPeople, updatePerson, type PersonDto } from "../api/persons";
 import "./family.css";
@@ -32,6 +32,7 @@ export default function FamilyPage() {
   const [faceImage, setFaceImage] = useState<string | null>(null);
   const [faceError, setFaceError] = useState("");
   const [mutationError, setMutationError] = useState("");
+  const [rowMenu, setRowMenu] = useState<string | null>(null);
   const faceReaderRef = useRef<FileReader | null>(null);
 
   const releaseFaceReader = (reader: FileReader) => {
@@ -155,12 +156,12 @@ export default function FamilyPage() {
       <div className="family-table-wrap"><table className="family-table"><thead><tr><th>Ảnh</th><th>Tên</th><th>Mối quan hệ</th><th>Số ảnh khuôn mặt</th><th>Chất lượng nhận diện</th><th>Trạng thái</th><th>Hành động</th></tr></thead><tbody>
         {visible.map((person) => { const score = averageQuality(person); const quality = qualityInfo(score, person.faces.length); return <tr key={person.id} className={!person.active ? "hidden-person" : ""} onClick={() => setSelectedId(person.id)}>
           <td><PersonAvatar person={person} /></td><td><strong>{person.name}</strong></td><td><span className="relationship-badge">{person.relationship}</span></td>
-          <td><span className="face-count"><Image /> {person.faces.length} ảnh khuôn mặt</span></td><td><div className={`recognition-quality ${quality.tone}`}><i /><span>{quality.label}</span>{person.faces.length > 0 && <small>{Math.round(score * 100)}%</small>}</div></td>
+          <td><span className="face-count"><Image /> {person.faces.length} ảnh khuôn mặt</span></td><td><div className={`recognition-quality ${quality.tone}`} title="Điểm tổng hợp từ chất lượng các ảnh khuôn mặt đã đăng ký; điểm cao giúp nhận diện ổn định hơn."><i /><span>{quality.label}</span>{person.faces.length > 0 && <small>{Math.round(score * 100)}%</small>}<HelpCircle /></div>{quality.tone !== "good" && <button className="family-add-photo-cta" onClick={(event)=>{event.stopPropagation();setSelectedId(person.id);setFaceFlow(true)}}>Bổ sung ảnh</button>}</td>
           <td><span className={`person-status ${person.active ? "active" : "hidden"}`}>{person.active ? "Đang hoạt động" : "Đã ẩn"}</span></td>
-          <td><div className="family-row-actions"><button className="family-profile-link" onClick={(event) => { event.stopPropagation(); setSelectedId(person.id); }}>Xem hồ sơ</button><button onClick={(event) => { event.stopPropagation(); togglePerson(person); }}>{person.active ? "Vô hiệu hoá" : "Kích hoạt"}</button></div></td>
+          <td><div className="family-row-actions"><button className="family-profile-link" onClick={(event) => { event.stopPropagation(); setSelectedId(person.id); }}>Xem hồ sơ</button><button className="family-more-button" aria-label={`Hành động khác cho ${person.name}`} aria-expanded={rowMenu===person.id} onClick={(event)=>{event.stopPropagation();setRowMenu(value=>value===person.id?null:person.id)}}><MoreHorizontal/></button>{rowMenu===person.id&&<div className="family-row-menu"><button onClick={(event)=>{event.stopPropagation();setRowMenu(null);togglePerson(person)}}>{person.active ? "Vô hiệu hoá" : "Kích hoạt"}</button></div>}</div></td>
         </tr>; })}
       </tbody></table></div>
-      <section className="family-mobile-list">{visible.map((person) => <button key={person.id} className={`family-mobile-card ${!person.active ? "hidden-person" : ""}`} onClick={() => setSelectedId(person.id)}><PersonAvatar person={person} /><span className="family-mobile-copy"><strong>{person.name}</strong><small>{person.relationship} · {person.faces.length} ảnh khuôn mặt</small></span><span className={`person-status ${person.active ? "active" : "hidden"}`}>{person.active ? "Hoạt động" : "Đã ẩn"}</span></button>)}</section>
+      <section className="family-mobile-list">{visible.map((person) => {const quality=qualityInfo(averageQuality(person),person.faces.length);return <button key={person.id} className={`family-mobile-card ${!person.active ? "hidden-person" : ""}`} onClick={() => setSelectedId(person.id)}><PersonAvatar person={person} /><span className="family-mobile-copy"><strong>{person.name}</strong><small>{person.relationship} · {person.faces.length} ảnh khuôn mặt</small><small className={`mobile-quality ${quality.tone}`}>{quality.label}{quality.tone!=="good"?" · Cần bổ sung ảnh":""}</small></span><span className={`person-status ${person.active ? "active" : "hidden"}`}>{person.active ? "Hoạt động" : "Đã ẩn"}</span></button>})}</section>
     </> : <div className="family-empty"><UsersRound /><h2>Chưa có người thân phù hợp</h2><p>Thêm hồ sơ đầu tiên hoặc thay đổi bộ lọc tìm kiếm.</p><button onClick={() => setAdding(true)}>+ Thêm người thân</button></div>}
 
     {selected && <div className="family-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setSelectedId(null)}><article className="family-detail-modal">

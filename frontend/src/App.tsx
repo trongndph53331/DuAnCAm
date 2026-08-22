@@ -76,7 +76,7 @@ function DashboardApp({ user, onLogout }: { user: AuthUser; onLogout: () => Prom
     return () => { stream.removeEventListener("ready", sync); stream.removeEventListener("alert", sync); stream.close(); };
   }, []);
   useEffect(() => {
-    const refreshUnread = () => { void fetchAlerts().then((items) => setUnreadAlerts(items.filter((item) => item.unread).length)).catch(() => undefined); };
+    const refreshUnread = () => { void fetchAlerts().then((items) => setUnreadAlerts(items.filter((item) => !["resolved", "safe", "false_alarm"].includes(item.status)).length)).catch(() => undefined); };
     refreshUnread();
     const timer = window.setInterval(refreshUnread, 15_000);
     window.addEventListener("focus", refreshUnread);

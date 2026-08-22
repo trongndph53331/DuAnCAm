@@ -1,16 +1,19 @@
-import { AlertTriangle, RefreshCw, Search } from "lucide-react";
+import { AlertTriangle, PanelLeftClose, RefreshCw, Search } from "lucide-react";
+import type { ReactNode } from "react";
 import { AlertFilters } from "./AlertFilters";
 import { AlertListItem } from "./AlertListItem";
 import type { AlertEvent, AlertFilter } from "./alert.types";
 
-export function AlertList({ alerts, selectedId, loading, error, search, filter, onSearch, onFilter, onSelect, onRetry }: {
+export function AlertList({ alerts, selectedId, loading, error, search, filter, advancedFilters, onCollapse, onSearch, onFilter, onSelect, onRetry }: {
   alerts: AlertEvent[]; selectedId: string; loading: boolean; error: boolean; search: string; filter: AlertFilter;
+  advancedFilters?: ReactNode; onCollapse?: () => void;
   onSearch: (value: string) => void; onFilter: (value: AlertFilter) => void; onSelect: (id: string) => void; onRetry: () => void;
 }) {
   return <aside className="alerts-list-panel" aria-label="Danh sách cảnh báo">
-    <div className="alert-list-tools">
+    <div className="alert-list-tools"><button className="alert-list-collapse" onClick={onCollapse} aria-label="Thu gọn danh sách cảnh báo" title="Thu gọn danh sách"><PanelLeftClose /></button>
       <label className="alert-search"><Search /><input value={search} onChange={(event) => onSearch(event.target.value)} placeholder="Tìm cảnh báo..." /></label>
       <AlertFilters value={filter} onChange={onFilter} />
+      {advancedFilters}
     </div>
     <div className="alert-list-scroll">
       {loading && Array.from({ length: 5 }, (_, index) => <div className="alert-skeleton" key={index}><i /><span /><span /></div>)}
