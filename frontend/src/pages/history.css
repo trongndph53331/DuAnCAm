@@ -121,9 +121,28 @@
 @media(max-width:767px){.history-filter-backdrop{position:fixed;z-index:1590;inset:0;display:block;border:0;background:var(--overlay)}.history-filter-panel.open{z-index:1600;left:0;right:0;bottom:0;max-height:calc(100dvh - 64px);padding:0;display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden}.history-filter-drawer-header{min-height:58px;padding:0 16px;border-bottom:1px solid var(--divider);display:flex;align-items:center;justify-content:space-between}.history-filter-drawer-header button{width:44px;height:44px;border:0;border-radius:var(--radius-md);display:grid;place-items:center;color:var(--text-secondary);background:var(--bg-subtle)}.history-filter-drawer-header svg{width:19px}.history-filter-scroll{padding:14px 14px calc(18px + env(safe-area-inset-bottom));overflow-y:auto;overscroll-behavior:contain}.history-route .history-mobile-list{overflow:visible!important}.history-route .history-page{padding-bottom:calc(96px + env(safe-area-inset-bottom))!important}}
 @media(max-width:900px){.history-table-wrap{display:none!important}.history-mobile-list{display:grid;gap:10px}.history-page{min-width:0}.history-pagination{max-width:100%}}
 
-/* History uses the route viewport as its single vertical scroller. */
-.history-route .history-page{padding-bottom:32px!important}
-.history-route .history-table{min-width:1000px}
-.history-route :where(.history-table-wrap,.history-mobile-list){height:auto!important;min-height:0!important;max-height:none!important;overflow-x:visible!important;overflow-y:visible!important}
-.history-route .history-pagination{position:static!important;top:auto!important;right:auto!important;bottom:auto!important;left:auto!important;transform:none!important;clear:both}
-@media(max-width:900px){.history-route .history-page{padding-bottom:calc(96px + env(safe-area-inset-bottom))!important}.history-route .history-pagination>label{display:flex}.history-route .history-mobile-list{padding-bottom:2px}}
+/* Desktop: the route stays fixed to the app viewport and only table rows scroll. */
+@media(min-width:901px){
+  .route-content.history-route{height:100%;min-height:0;overflow:hidden!important}
+  .history-route .history-page{height:100%!important;min-height:0!important;padding-bottom:16px!important;overflow:hidden!important;display:flex!important;flex-direction:column}
+  .history-route .history-heading,.history-route .history-filter-summary,.history-route .history-filter-panel,.history-route .history-list-heading,.history-route .history-pagination{flex:0 0 auto}
+  .history-route .history-list-heading{margin-top:12px}
+  .history-route .history-pagination{position:static!important;inset:auto!important;transform:none!important;clear:both;margin-top:8px!important}
+  .history-route .history-pagination-top{margin-bottom:8px!important}
+  .history-route .history-pagination-bottom{margin-top:8px!important}
+  .history-route .history-table-wrap{height:auto!important;min-height:120px!important;max-height:none!important;flex:1 1 auto;overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain;scrollbar-gutter:stable}
+  .history-route .history-table{min-width:0;width:100%;table-layout:fixed}
+  .history-route .history-table thead th{position:sticky;z-index:2;top:0;background:var(--bg-surface);box-shadow:0 1px 0 var(--divider)}
+  .history-route .history-mobile-list{display:none!important}
+}
+
+/* Mobile/tablet: keep natural page scrolling and reserve the bottom-nav safe area. */
+@media(max-width:900px){
+  .route-content.history-route{height:100%;overflow-x:hidden!important;overflow-y:auto!important}
+  .history-route .history-page{height:auto!important;min-height:100%!important;padding-bottom:calc(96px + env(safe-area-inset-bottom))!important;overflow:visible!important;display:block!important}
+  .history-route .history-table-wrap{display:none!important}
+  .history-route .history-mobile-list{height:auto!important;min-height:0!important;max-height:none!important;padding-bottom:2px;overflow:visible!important}
+  .history-route .history-pagination{position:static!important;inset:auto!important;transform:none!important;clear:both;margin-top:10px!important;max-width:100%}
+  .history-route .history-pagination-top{margin-bottom:10px!important}
+  .history-route .history-pagination>label{display:flex}
+}

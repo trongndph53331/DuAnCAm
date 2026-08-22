@@ -291,6 +291,16 @@ export default function HistoryPage() {
   const pageEnd = Math.min(currentPage * pageSize, filtered.length);
   const changeFilter = (setter: (value: string) => void, value: string) => { setter(value); setPage(1); };
   const resetFilters = () => { setRange("7d"); setKind("all"); setCameraId("all"); setStatus("all"); setPerson("all"); setSearch(""); setCustomFrom(""); setCustomTo(""); setPage(1); };
+  const pagination = (position: "top" | "bottom") => <div className={`history-pagination history-pagination-${position}`}>
+    <div>Hiển thị <strong>{pageStart}-{pageEnd}</strong> trong tổng <strong>{filtered.length}</strong> sự kiện</div>
+    <label>Số dòng<select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option></select></label>
+    <nav aria-label={`Phân trang ${position === "top" ? "phía trên" : "phía dưới"}`}>
+      <button disabled={currentPage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><ChevronLeft /><span>Trước</span></button>
+      <span className="mobile-page-indicator">Trang {currentPage}/{totalPages}</span>
+      {Array.from({ length: totalPages }, (_, index) => index + 1).map((number) => <button key={number} className={`page-number ${number === currentPage ? "active" : ""}`} onClick={() => setPage(number)} aria-current={number === currentPage ? "page" : undefined}>{number}</button>)}
+      <button disabled={currentPage === totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}><span>Sau</span><ChevronRight /></button>
+    </nav>
+  </div>;
   if (loading) return <div className="history-page page-wrap"><section className="history-empty"><span><RefreshCw /></span><h2>Đang tải lịch sử…</h2></section></div>;
   if (loadError) return <div className="history-page page-wrap"><section className="history-empty"><span><AlertTriangle /></span><h2>Không tải được lịch sử</h2><p>Hãy kiểm tra kết nối tới backend Local Hub.</p><div><button onClick={loadHistory}>Thử lại</button></div></section></div>;
   return <div className="history-page page-wrap">
@@ -315,6 +325,7 @@ export default function HistoryPage() {
 
     {filtered.length ? <>
       <div className="history-list-heading"><div><span className="live-dot" /> Mới nhất trước</div></div>
+      {pagination("top")}
       <div className="history-table-wrap">
         <table className="history-table">
           <thead><tr><th>Ảnh</th><th>Thời gian</th><th>Sự kiện</th><th>Camera / Vị trí</th><th>Trạng thái</th><th><span className="sr-only">Hành động</span></th></tr></thead>
@@ -341,7 +352,7 @@ export default function HistoryPage() {
           {event.alert && <span className={`alert-status ${event.alert.status}`}>{statusLabels[event.alert.status]}</span>}
         </button>;
       })}</section>
-      <div className="history-pagination"><div>Hiển thị <strong>{pageStart}-{pageEnd}</strong> trong tổng <strong>{filtered.length}</strong> sự kiện</div><label>Số dòng<select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option></select></label><nav aria-label="Phân trang"><button disabled={currentPage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><ChevronLeft /><span>Trước</span></button><span className="mobile-page-indicator">Trang {currentPage}/{totalPages}</span>{Array.from({ length: totalPages }, (_, index) => index + 1).map((number) => <button key={number} className={`page-number ${number === currentPage ? "active" : ""}`} onClick={() => setPage(number)} aria-current={number === currentPage ? "page" : undefined}>{number}</button>)}<button disabled={currentPage === totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}><span>Sau</span><ChevronRight /></button></nav></div>
+      {pagination("bottom")}
     </> : <section className="history-empty"><span><History /></span><h2>Chưa có sự kiện phù hợp</h2><p>Thử thay đổi bộ lọc hoặc quay lại camera để theo dõi hoạt động mới.</p><div><button onClick={resetFilters}>Xoá bộ lọc</button><a href="/camera">Xem camera</a></div></section>}
 
     {selected && <div className="history-modal-backdrop" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && setSelected(null)}>
