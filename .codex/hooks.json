@@ -21,7 +21,7 @@
             "type": "command",
             "command": "bash \"$(git rev-parse --show-toplevel)/scripts/_pyrun.sh\" \"$(git rev-parse --show-toplevel)/scripts/log_hook.py\" --tool=codex",
             "commandWindows": "cmd.exe /d /c scripts\\_pyrun.cmd scripts\\log_hook.py --tool=codex",
-            "timeout": 10
+            "timeout": 3
           }
         ]
       }
