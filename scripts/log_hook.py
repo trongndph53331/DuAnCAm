@@ -92,7 +92,7 @@ def normalize(data: dict, tool: str) -> dict | None:
         prompt = ""
         # UserPromptSubmit: prompt is at top level
         if event == "UserPromptSubmit":
-            prompt = data.get("prompt", "")[:1000]
+            prompt = data.get("prompt", "")
         # PostToolUse: extract from tool_input
         elif isinstance(data.get("tool_input"), dict):
             prompt = data["tool_input"].get("prompt") or data["tool_input"].get("content") or ""
@@ -105,7 +105,7 @@ def normalize(data: dict, tool: str) -> dict | None:
 
     elif tool == "gemini":
         if event == "BeforeAgent":
-            prompt = data.get("prompt", "")[:1000]
+            prompt = data.get("prompt", "")
             base.update({"prompt": prompt})
         else:
             req = data.get("request", {})
@@ -114,7 +114,7 @@ def normalize(data: dict, tool: str) -> dict | None:
             for c in reversed(contents):
                 for part in c.get("parts", []):
                     if part.get("text"):
-                        prompt = part["text"][:1000]
+                        prompt = part["text"]
                         break
                 if prompt:
                     break
@@ -128,20 +128,20 @@ def normalize(data: dict, tool: str) -> dict | None:
 
     elif tool == "codex":
         base.update({
-            "prompt": data.get("prompt", "")[:1000],
+            "prompt": data.get("prompt", ""),
             "turn_id": data.get("turn_id", ""),
             "transcript_path": data.get("transcript_path", ""),
         })
 
     elif tool == "cursor":
         base.update({
-            "prompt": data.get("prompt", "")[:1000],
+            "prompt": data.get("prompt", ""),
             "files_context": data.get("attachments", []),
         })
 
     elif tool == "copilot":
         base.update({
-            "prompt": data.get("prompt", "")[:1000],
+            "prompt": data.get("prompt", ""),
             "tool_name": data.get("toolName", ""),
             "tool_args": data.get("toolArgs"),
         })

@@ -392,7 +392,7 @@ def _legacy_log(summary: str, model: str) -> None:
         "commit": git("git rev-parse --short HEAD"),
         "student": git("git config user.email") or os.environ.get(
             "USERNAME", os.environ.get("USER", "unknown")),
-        "prompt": summary[:1000],
+        "prompt": summary,
         "response_summary": f"[Antigravity] {summary[:500]}",
     }
     log_dir = Path(os.environ.get("AI_LOG_DIR", ".ai-log"))
