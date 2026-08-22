@@ -248,6 +248,7 @@ export default function HistoryPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const loadHistory = () => { setLoading(true); setLoadError(false); getHistory().then((items) => setEvents(items as HistoryEvent[])).catch(() => setLoadError(true)).finally(() => setLoading(false)); };
   useEffect(loadHistory, []);
+  useEffect(() => { const close=(event:KeyboardEvent)=>{if(event.key==="Escape")setFiltersOpen(false)};document.addEventListener("keydown",close);return()=>document.removeEventListener("keydown",close)},[]);
 
   const cameras = useMemo(() => Array.from(new Map(events.map((event) => [event.cameraId, { id: event.cameraId, name: event.cameraName }])).values()), [events]);
   const persons = useMemo(() => Array.from(new Map(events.flatMap((event) => event.person ? [[event.person.id, event.person] as const] : [])).values()), [events]);
@@ -299,7 +300,7 @@ export default function HistoryPage() {
     </div>
 
     <div className="history-filter-summary"><button onClick={()=>setFiltersOpen(value=>!value)} aria-expanded={filtersOpen}><SlidersHorizontal/> Bộ lọc nâng cao</button><div className="history-filter-chips"><span>{range === "today" ? "Hôm nay" : range === "30d" ? "30 ngày qua" : range === "custom" ? "Tùy chọn" : "7 ngày qua"}</span>{kind!=="all"&&<span>{kind==="fall_suspected"?"Nghi ngờ té ngã":"Phát hiện người"}</span>}{cameraId!=="all"&&<span>{cameras.find(item=>item.id===cameraId)?.name}</span>}{status!=="all"&&<span>{statusLabels[status as AlertStatus]}</span>}{person!=="all"&&<span>{person==="unknown"?"Người lạ":persons.find(item=>item.id===person)?.name}</span>}</div></div>
-    <section className={`history-filter-panel ${filtersOpen ? "open" : ""}`} aria-label="Bộ lọc lịch sử">
+    {filtersOpen&&<button className="history-filter-backdrop" aria-label="Đóng bộ lọc" onClick={()=>setFiltersOpen(false)}/>}<section className={`history-filter-panel ${filtersOpen ? "open" : ""}`} aria-label="Bộ lọc lịch sử"><header className="history-filter-drawer-header"><strong>Bộ lọc nâng cao</strong><button aria-label="Đóng bộ lọc" onClick={()=>setFiltersOpen(false)}><X/></button></header><div className="history-filter-scroll">
       <div className="history-filters">
         <div className="history-search"><Search /><input value={search} onChange={(e) => changeFilter(setSearch, e.target.value)} placeholder="Tìm người, camera..." aria-label="Tìm kiếm lịch sử" />{search && <button onClick={() => changeFilter(setSearch, "")} aria-label="Xoá tìm kiếm"><X /></button>}</div>
         <FilterDropdown label="Khoảng thời gian" icon={CalendarDays} value={range} onChange={(value) => changeFilter(setRange, value)} options={[{ value: "today", label: "Hôm nay" }, { value: "7d", label: "7 ngày qua" }, { value: "30d", label: "30 ngày qua" }, { value: "custom", label: "Tuỳ chọn" }]} />
@@ -310,7 +311,7 @@ export default function HistoryPage() {
         <button className="compact-reset" onClick={resetFilters} title="Đặt lại bộ lọc"><RotateCcw /> <span>Đặt lại</span></button>
       </div>
       {range === "custom" && <div className="custom-date-range"><label><span>Từ ngày</span><input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} /></label><span>đến</span><label><span>Đến ngày</span><input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} /></label></div>}
-    </section>
+    </div></section>
 
     {filtered.length ? <>
       <div className="history-list-heading"><div><span className="live-dot" /> Mới nhất trước</div></div>

@@ -148,7 +148,7 @@ export default function FamilyPage() {
     {mutationError && <p className="family-mutation-error" role="alert"><AlertTriangle />{mutationError}</p>}
     <div className="family-toolbar">
       <label><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm theo tên hoặc mối quan hệ..." /></label>
-      <div><span>Hiện cả người đã ẩn</span><button className={`family-switch ${showHidden ? "on" : ""}`} role="switch" aria-checked={showHidden} onClick={() => setShowHidden((value) => !value)}><i /></button></div>
+      <div><span>Hiện cả người đã ẩn</span><button className={`family-switch ${showHidden ? "on" : ""}`} role="switch" aria-label="Hiện người thân đã vô hiệu hoá" title="Hiện người thân đã vô hiệu hoá" aria-checked={showHidden} onClick={() => setShowHidden((value) => !value)}><i /></button></div>
       <aside className="family-total"><UsersRound /><span><strong>{visible.length}</strong><small>người thân</small></span></aside>
     </div>
 
@@ -165,7 +165,7 @@ export default function FamilyPage() {
     </> : <div className="family-empty"><UsersRound /><h2>Chưa có người thân phù hợp</h2><p>Thêm hồ sơ đầu tiên hoặc thay đổi bộ lọc tìm kiếm.</p><button onClick={() => setAdding(true)}>+ Thêm người thân</button></div>}
 
     {selected && <div className="family-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setSelectedId(null)}><article className="family-detail-modal">
-      <header><div><PersonAvatar person={selected} large /><span><h2>{selected.name}</h2><p>{selected.relationship} · {selected.faces.length} ảnh khuôn mặt</p></span></div><button onClick={() => setSelectedId(null)}><X /></button></header>
+      <header><div><PersonAvatar person={selected} large /><span><h2>{selected.name}</h2><p>{selected.relationship} · {selected.faces.length} ảnh khuôn mặt</p></span></div><button aria-label="Đóng hồ sơ" title="Đóng" onClick={() => setSelectedId(null)}><X /></button></header>
       <div className="family-detail-scroll"><section className="family-basic-form"><div className="family-section-title"><h3>Thông tin cơ bản</h3><small>Dữ liệu được lưu trong SQLite trên Local Hub</small></div><div>
         <label><span>Tên hiển thị</span><input value={selected.name} onChange={(event) => editLocal({ name: event.target.value })} onBlur={saveSelected} /></label>
         <label><span>Mối quan hệ</span><input value={selected.relationship} onChange={(event) => editLocal({ relationship: event.target.value })} onBlur={saveSelected} /></label>

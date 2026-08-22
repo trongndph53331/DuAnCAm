@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PanelLeftOpen, SlidersHorizontal } from "lucide-react";
 import { AlertConversation } from "./AlertConversation";
 import { AlertList } from "./AlertList";
-import { fetchAlerts, markAlertRead, updateAlertStatus } from "./alertService";
+import { fetchAlerts, updateAlertStatus } from "./alertService";
 import type { AlertEvent, AlertFilter } from "./alert.types";
 import "./alerts.css";
 import "./snapshotApi.css";
@@ -25,16 +25,7 @@ export default function AlertsPage() {
     document.body.classList.toggle("alerts-conversation-open", mobileConversation);
     return () => document.body.classList.remove("alerts-conversation-open");
   }, [mobileConversation]);
-  useEffect(() => {
-    if (!mobileConversation || !selectedId) return;
-    const selectedAlert = alerts.find((item) => item.id === selectedId);
-    if (!selectedAlert?.unread) return;
-    setAlerts((items) => items.map((item) => item.id === selectedId ? { ...item, unread: false } : item));
-    void markAlertRead(selectedId).then((updated) => {
-      setAlerts((items) => items.map((item) => item.id === selectedId ? updated : item));
-      window.dispatchEvent(new CustomEvent("antam:alerts-changed"));
-    }).catch(() => setAlerts((items) => items.map((item) => item.id === selectedId ? { ...item, unread: true } : item)));
-  }, [alerts, mobileConversation, selectedId]);
+  useEffect(() => { const close=(event:KeyboardEvent)=>{if(event.key==="Escape")setAdvancedOpen(false)};document.addEventListener("keydown",close);return()=>document.removeEventListener("keydown",close)},[]);
   useEffect(() => {
     const syncAlertRoute = () => {
       const id = routeAlertId();
@@ -53,7 +44,7 @@ export default function AlertsPage() {
   }, []);
   const visibleAlerts = useMemo(() => alerts.filter((alert) => { const query = search.trim().toLocaleLowerCase("vi"); const matchesSearch = !query || `${alert.title} ${alert.subject} ${alert.location}`.toLocaleLowerCase("vi").includes(query); const matchesFilter = filter === "all" || (filter === "pending" && ["pending", "checking", "need_help"].includes(alert.status)) || (filter === "critical" && alert.severity === "critical") || (filter === "resolved" && ["resolved", "safe", "false_alarm"].includes(alert.status)); const age=Date.now()-Date.parse(alert.occurredAt); const matchesTime=timeFilter==="all"||(timeFilter==="today"&&age<=86400000)||(timeFilter==="7d"&&age<=604800000); return matchesSearch && matchesFilter && matchesTime && (cameraFilter==="all"||alert.cameraId===cameraFilter) && (typeFilter==="all"||alert.type===typeFilter) && (statusFilter==="all"||alert.status===statusFilter); }), [alerts, search, filter, timeFilter, cameraFilter, typeFilter, statusFilter]);
   const selected = alerts.find((alert) => alert.id === selectedId) ?? alerts[0];
-  const selectAlert = (id: string) => { window.history.pushState({}, "", `/alerts/${encodeURIComponent(id)}`); setSelectedId(id); setAlerts((items) => items.map((item) => item.id === id ? { ...item, unread: false } : item)); setMobileConversation(true); };
+  const selectAlert = (id: string) => { window.history.pushState({}, "", `/alerts/${encodeURIComponent(id)}`); setSelectedId(id); setMobileConversation(true); };
   const backToList = () => { window.history.pushState({}, "", "/alerts"); setMobileConversation(false); };
   const updateStatus = (status: AlertEvent["status"], note?: string) => {
     if (!selected) return;
@@ -69,7 +60,7 @@ export default function AlertsPage() {
     });
   };
   const cameras=Array.from(new Map(alerts.map((item)=>[item.cameraId,item.location])).entries());
-  const advancedFilters=<div className="alert-advanced"><button className="alert-advanced-trigger" onClick={()=>setAdvancedOpen(value=>!value)} aria-expanded={advancedOpen}><SlidersHorizontal/> Bộ lọc nâng cao</button>{advancedOpen&&<div className="alert-advanced-popover"><label>Thời gian<select value={timeFilter} onChange={e=>setTimeFilter(e.target.value)}><option value="all">Tất cả</option><option value="today">Hôm nay</option><option value="7d">7 ngày qua</option></select></label><label>Camera<select value={cameraFilter} onChange={e=>setCameraFilter(e.target.value)}><option value="all">Tất cả camera</option>{cameras.map(([id,label])=><option value={id} key={id}>{label}</option>)}</select></label><label>Loại sự kiện<select value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}><option value="all">Tất cả loại</option><option value="fall">Té ngã</option><option value="stranger">Người lạ</option><option value="inactivity">Bất động</option><option value="camera">Camera</option><option value="arrival">Xuất hiện</option></select></label><label>Trạng thái<select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="all">Tất cả trạng thái</option><option value="pending">Chờ xử lý</option><option value="checking">Đã xem</option><option value="safe">An toàn</option><option value="false_alarm">Báo sai</option></select></label></div>}</div>;
+  const advancedFilters=<div className="alert-advanced"><button className="alert-advanced-trigger" onClick={()=>setAdvancedOpen(value=>!value)} aria-expanded={advancedOpen}><SlidersHorizontal/> Bộ lọc nâng cao</button>{advancedOpen&&<><button className="alert-filter-backdrop" aria-label="Đóng bộ lọc" onClick={()=>setAdvancedOpen(false)}/><div className="alert-advanced-popover" role="dialog" aria-modal="true" aria-label="Bộ lọc cảnh báo"><header><strong>Bộ lọc nâng cao</strong><button aria-label="Đóng bộ lọc" onClick={()=>setAdvancedOpen(false)}>×</button></header><div className="alert-filter-scroll"><label>Thời gian<select value={timeFilter} onChange={e=>setTimeFilter(e.target.value)}><option value="all">Tất cả</option><option value="today">Hôm nay</option><option value="7d">7 ngày qua</option></select></label><label>Camera<select value={cameraFilter} onChange={e=>setCameraFilter(e.target.value)}><option value="all">Tất cả camera</option>{cameras.map(([id,label])=><option value={id} key={id}>{label}</option>)}</select></label><label>Loại sự kiện<select value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}><option value="all">Tất cả loại</option><option value="fall">Té ngã</option><option value="stranger">Người lạ</option><option value="inactivity">Bất động</option><option value="camera">Camera</option><option value="arrival">Xuất hiện</option></select></label><label>Trạng thái<select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="all">Tất cả trạng thái</option><option value="pending">Chờ xử lý</option><option value="checking">Đã xem</option><option value="safe">An toàn</option><option value="false_alarm">Báo sai</option></select></label></div></div></>}</div>;
   return <section className={`alerts-page ${mobileConversation ? "conversation-open" : ""} ${listCollapsed ? "list-collapsed" : ""}`}>
     {listCollapsed&&<button className="alert-list-expand" onClick={()=>setListCollapsed(false)} aria-label="Mở danh sách cảnh báo"><PanelLeftOpen/></button>}<div className="alerts-workspace"><AlertList alerts={visibleAlerts} selectedId={selectedId} loading={loading} error={error} search={search} filter={filter} advancedFilters={advancedFilters} onCollapse={()=>setListCollapsed(true)} onSearch={setSearch} onFilter={setFilter} onSelect={selectAlert} onRetry={load} />{selected ? <AlertConversation key={selected.id} alert={selected} onBack={backToList} onStatus={updateStatus} /> : <div className="alerts-empty">Chọn một cảnh báo để bắt đầu.</div>}</div>
   </section>;
