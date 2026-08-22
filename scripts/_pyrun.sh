@@ -1,21 +1,20 @@
 #!/usr/bin/env bash
 # Cross-platform Python launcher for AI log hooks.
-# Tries python3 → python → py -3 on PATH; on Windows, falls back to common
-# Python install locations because Git Bash launched by some hooks gets a
-# stripped PATH that omits the Windows Python directory.
-# Designed to be sourced or called as: bash scripts/_pyrun.sh <script> [args...]
-#
-# Exits 0 silently if no Python is found — hooks must never block the AI tool.
+# Prefer the Windows Python launcher because Microsoft Store aliases can appear
+# on PATH without providing a usable Python executable.
+# Designed to be called as: bash scripts/_pyrun.sh <script> [args...]
+# Hooks must never block the parent AI or Git process when Python is absent.
 set -u
 
-if command -v python3 >/dev/null 2>&1; then
-  PY=python3
-elif command -v python >/dev/null 2>&1; then
-  PY=python
+if [ -x ".venv/Scripts/python.exe" ]; then
+  PY=".venv/Scripts/python.exe"
 elif command -v py >/dev/null 2>&1; then
   PY="py -3"
+elif command -v python3 >/dev/null 2>&1 && python3 --version >/dev/null 2>&1; then
+  PY=python3
+elif command -v python >/dev/null 2>&1 && python --version >/dev/null 2>&1; then
+  PY=python
 else
-  # PATH lookup failed — probe standard Windows install locations.
   PY=""
   shopt -s nullglob 2>/dev/null || true
   for cand in \
