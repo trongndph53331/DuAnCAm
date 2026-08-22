@@ -1,0 +1,77 @@
+/* Scoped semantic theme layer for /camera; layout remains in existing styles. */
+.smart-camera-page{color:var(--text-primary)}
+.smart-camera-heading p{color:var(--text-secondary)}
+.smart-camera-heading>span{color:var(--success);background:var(--success-subtle)}
+.smart-viewer-shell{color:var(--text-primary);background:var(--bg-surface);border-color:var(--border-default);box-shadow:var(--shadow-md)}
+
+.camera-selector-wrap>header h2{color:var(--text-primary)}
+.camera-selector-wrap>header button{color:var(--text-secondary);background:var(--bg-elevated);border-color:var(--border-default)}
+.camera-selector-wrap>header button:hover:not(:disabled){color:var(--primary);background:var(--interactive-hover);border-color:var(--border-strong)}
+.camera-selector-wrap>header button:focus-visible{outline:0;color:var(--primary);border-color:var(--focus-ring);box-shadow:0 0 0 3px color-mix(in srgb,var(--focus-ring) 25%,transparent)}
+.camera-selector-wrap>header button:active:not(:disabled){background:var(--interactive-active)}
+.camera-selector-wrap>header button:disabled{color:var(--text-muted);background:var(--bg-subtle);border-color:var(--divider);cursor:not-allowed;opacity:.5}
+
+.camera-selector>button{color:var(--text-primary);background:var(--bg-elevated);border-color:var(--border-default);box-shadow:var(--shadow-sm)}
+.camera-selector>button:has(.video-thumbnail.offline){background:var(--bg-subtle)}
+.camera-selector>button:hover:not(:disabled){color:var(--text-primary);background:var(--interactive-hover);border-color:var(--border-strong);box-shadow:var(--shadow-md)}
+.camera-selector>button:focus-visible{outline:0;color:var(--text-primary);background:var(--interactive-hover);border-color:var(--focus-ring);box-shadow:0 0 0 3px color-mix(in srgb,var(--focus-ring) 25%,transparent)}
+.camera-selector>button.active,.camera-selector>button.active:hover{color:var(--text-primary);background:var(--primary-subtle);border-color:var(--primary);box-shadow:inset 0 -3px 0 var(--primary)}
+.camera-selector>button:disabled{color:var(--text-muted);background:var(--bg-subtle);border-color:var(--divider);cursor:not-allowed;opacity:.55}
+.thumbnail-camera-info{background:transparent}
+.thumbnail-camera-info strong{color:var(--text-primary)}
+.thumbnail-camera-info small{color:var(--success)}
+.camera-selector>button:has(.video-thumbnail.offline) .thumbnail-camera-info small{color:var(--text-muted)}
+.thumbnail-camera-info small i{background:var(--success)}
+.thumbnail-camera-info small i.offline{background:var(--danger)}
+.thumbnail-status{color:var(--success);background:var(--media-overlay-soft)}
+.thumbnail-status i{background:var(--success)}
+.thumbnail-status.offline{color:var(--danger)}
+.thumbnail-status.offline i{background:var(--danger)}
+.camera-carousel-dots i{background:var(--border-strong)}
+.camera-carousel-dots i.active{background:var(--primary)}
+
+.vision-display-controls label{color:var(--text-secondary);background:var(--bg-elevated);border-color:var(--border-default);transition:background var(--transition-fast),border-color var(--transition-fast),color var(--transition-fast),box-shadow var(--transition-fast)}
+.vision-display-controls label:hover{color:var(--text-primary);background:var(--interactive-hover);border-color:var(--border-strong)}
+.vision-display-controls label:has(input:focus-visible){color:var(--text-primary);background:var(--interactive-hover);border-color:var(--focus-ring);box-shadow:0 0 0 3px color-mix(in srgb,var(--focus-ring) 25%,transparent)}
+.vision-display-controls input{accent-color:var(--primary)}
+.vision-display-controls input:disabled{cursor:not-allowed;opacity:.5}
+.vision-display-controls label:has(input:disabled){color:var(--text-muted);background:var(--bg-subtle);cursor:not-allowed;opacity:.65}
+
+.smart-camera-actions button{color:var(--text-primary);background:var(--bg-elevated);border-color:var(--border-default)}
+.smart-camera-actions button.primary{color:var(--primary);background:var(--primary-subtle);border-color:var(--primary)}
+.smart-camera-actions button:hover:not(:disabled){color:var(--text-primary);background:var(--interactive-hover);border-color:var(--border-strong)}
+.smart-camera-actions button:focus-visible{outline:0;border-color:var(--focus-ring);box-shadow:0 0 0 3px color-mix(in srgb,var(--focus-ring) 25%,transparent)}
+.smart-camera-actions button:active:not(:disabled){background:var(--interactive-active)}
+.smart-camera-actions button:disabled{color:var(--text-muted);background:var(--bg-subtle);border-color:var(--divider);opacity:.5}
+.smart-camera-actions small{color:var(--text-secondary)}
+.camera-readonly-state{color:var(--text-primary);background:var(--bg-elevated);border-color:var(--border-default);transition:background var(--transition-fast),border-color var(--transition-fast)}
+.camera-readonly-state:hover{background:var(--interactive-hover);border-color:var(--border-strong)}
+.camera-readonly-state>svg{color:var(--primary)}
+.camera-readonly-state small{color:var(--text-secondary)}
+
+/* Never theme, desaturate, or blend camera imagery. */
+.smart-camera-page :where(img,video,canvas),.video-thumbnail.offline :where(img,video,canvas){filter:none!important;opacity:1!important;mix-blend-mode:normal;color-scheme:only light}
+
+/* Today's events only. */
+.viewer-recent-events{color:var(--text-primary);border-color:var(--divider)}
+.viewer-recent-events h2{color:var(--text-primary)}
+.viewer-recent-events header p{color:var(--text-secondary)}
+.viewer-recent-events header button{color:var(--primary);background:transparent;border-radius:var(--radius-md)}
+.viewer-recent-events header button:hover{color:var(--primary-hover);background:var(--interactive-hover)}
+.viewer-recent-events header button:focus-visible{outline:0;color:var(--primary);background:var(--interactive-hover);box-shadow:0 0 0 3px color-mix(in srgb,var(--focus-ring) 25%,transparent)}
+.viewer-recent-events header button:active{color:var(--primary-active);background:var(--interactive-active)}
+.viewer-recent-events>div{color:var(--text-primary);background:var(--bg-surface);border-color:var(--border-default)}
+.viewer-recent-events .viewer-event-row{color:var(--text-primary);background:var(--bg-surface);border-color:var(--divider);transition:background var(--transition-fast),color var(--transition-fast),box-shadow var(--transition-fast)}
+.viewer-recent-events .viewer-event-row:hover{color:var(--text-primary);background:var(--interactive-hover)}
+.viewer-recent-events .viewer-event-row:focus-visible{outline:0;color:var(--text-primary);background:var(--interactive-hover);box-shadow:inset 0 0 0 2px var(--focus-ring)}
+.viewer-recent-events .viewer-event-row:active{background:var(--interactive-active)}
+.viewer-recent-events .viewer-event-row.selected,.viewer-recent-events .viewer-event-row[aria-selected="true"]{color:var(--text-primary);background:var(--primary-subtle);box-shadow:inset 3px 0 0 var(--primary)}
+.viewer-event-row time{color:var(--text-muted)}
+.viewer-event-row strong{color:var(--text-primary)}
+.viewer-event-row small{color:var(--text-secondary)}
+.viewer-event-row>span{color:var(--info);background:var(--info-subtle)}
+.viewer-event-row.danger>span{color:var(--danger);background:var(--danger-subtle)}
+.viewer-event-row.safe>span{color:var(--success);background:var(--success-subtle)}
+.viewer-event-row>svg{color:var(--text-muted)}
+.viewer-event-row:hover>svg,.viewer-event-row:focus-visible>svg{color:var(--primary)}
+.viewer-events-empty{color:var(--text-muted);background:var(--bg-surface)}

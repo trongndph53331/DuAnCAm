@@ -4,6 +4,7 @@ import { deleteCamera, getCamera, getCameras, setCameraIdentity, updateCamera, t
 import { CameraStream } from "../components";
 import "./cameraViewer.css";
 import "./cameraApi.css";
+import "./cameraTheme.css";
 
 export default function CameraPage() {
   const [feeds, setFeeds] = useState<CameraDto[]>([]);
