@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { BarChart3, Bell, Camera, HeartHandshake, History, Home, LogOut, Menu, Monitor, Moon, MoreHorizontal, Settings, ShieldCheck, Sun, UsersRound } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { BarChart3, Bell, Camera, ChevronDown, HeartHandshake, History, Home, LogOut, Menu, Monitor, Moon, MoreHorizontal, Settings, ShieldCheck, Sun, UsersRound } from "lucide-react";
 import AlertsPage from "./features/alerts/AlertsPage";
 import CameraPage from "./pages/CameraPage";
 import FamilyPage from "./pages/FamilyPage";
@@ -31,12 +31,18 @@ const currentPath = (): RoutePath => {
   return routePaths.has(window.location.pathname) ? window.location.pathname as RoutePath : "/";
 };
 
-function DashboardApp({ user, onLogout }: { user: AuthUser; onLogout: () => void }) {
+function DashboardApp({ user, onLogout }: { user: AuthUser; onLogout: () => Promise<void> }) {
   const { theme, cycleTheme } = useTheme();
   const [activePath, setActivePath] = useState<RoutePath>(currentPath);
   const [routeRevision, setRouteRevision] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const [logoutPending, setLogoutPending] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
+  const accountRef = useRef<HTMLDivElement>(null);
+  const cancelLogoutRef = useRef<HTMLButtonElement>(null);
   const [isMobileLayout, setIsMobileLayout] = useState(() => window.matchMedia("(max-width: 767px)").matches);
 
   useEffect(() => {
@@ -46,6 +52,22 @@ function DashboardApp({ user, onLogout }: { user: AuthUser; onLogout: () => void
     syncLayout(); mobileQuery.addEventListener("change", syncLayout); window.addEventListener("resize", syncLayout); window.visualViewport?.addEventListener("resize", syncLayout); window.addEventListener("popstate", syncRoute);
     return () => { mobileQuery.removeEventListener("change", syncLayout); window.removeEventListener("resize", syncLayout); window.visualViewport?.removeEventListener("resize", syncLayout); window.removeEventListener("popstate", syncRoute); };
   }, []);
+  useEffect(() => {
+    const closeAccount = (event: PointerEvent) => {
+      if (!accountRef.current?.contains(event.target as Node)) setAccountOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (logoutConfirmOpen && !logoutPending) setLogoutConfirmOpen(false);
+      else setAccountOpen(false);
+    };
+    document.addEventListener("pointerdown", closeAccount);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => { document.removeEventListener("pointerdown", closeAccount); document.removeEventListener("keydown", closeOnEscape); };
+  }, [logoutConfirmOpen, logoutPending]);
+  useEffect(() => {
+    if (logoutConfirmOpen) cancelLogoutRef.current?.focus();
+  }, [logoutConfirmOpen]);
   useEffect(() => {
     const stream = new EventSource(`${API_BASE_URL}/alerts/stream`);
     const sync = () => window.dispatchEvent(new CustomEvent("antam:alerts-changed"));
@@ -67,7 +89,23 @@ function DashboardApp({ user, onLogout }: { user: AuthUser; onLogout: () => void
     if (path !== activePath) window.history.pushState({}, "", path);
     setActivePath(path);
     setMobileOpen(false);
+    setAccountOpen(false);
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  };
+  const requestLogout = () => {
+    setAccountOpen(false);
+    setLogoutError("");
+    setLogoutConfirmOpen(true);
+  };
+  const confirmLogout = async () => {
+    setLogoutPending(true);
+    setLogoutError("");
+    try {
+      await onLogout();
+    } catch {
+      setLogoutError("Không thể đăng xuất lúc này. Vui lòng thử lại.");
+      setLogoutPending(false);
+    }
   };
   const activeNav = navItems.find((item) => item.path === activePath)?.label ?? "Tổng quan";
   const visibleNav = navItems.filter(item => item.path !== "/statistics" || user.role === "admin");
@@ -86,10 +124,11 @@ function DashboardApp({ user, onLogout }: { user: AuthUser; onLogout: () => void
     </aside>
     {isMobileLayout && mobileOpen && <button className="scrim" aria-label="Đóng menu" onClick={() => setMobileOpen(false)} />}
     <main className="main-content">
-      <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileOpen(true)} aria-label="Mở menu"><Menu /></button><button className="mobile-brand" onClick={() => navigate("/")} aria-label="Về Tổng quan"><span className="brand-mark"><HeartHandshake /></span></button><div className="topbar-spacer" />{activePath === "/alerts" && <span className="topbar-protection"><ShieldCheck /> Đang bảo vệ</span>}<Tooltip content={`Giao diện: ${theme === "light" ? "Sáng" : theme === "dark" ? "Tối" : "Theo hệ thống"}`}><IconButton className="theme-toggle" variant="secondary" label="Chuyển chế độ giao diện" onClick={cycleTheme}>{theme === "light" ? <Sun /> : theme === "dark" ? <Moon /> : <Monitor />}</IconButton></Tooltip><div className="profile"><span className="avatar small">{user.name[0]}</span><span><strong>{user.name}</strong><small>{user.role === "admin" ? "Quản trị viên" : "Người chăm sóc"}</small></span></div><button className="logout-button" onClick={onLogout} title="Đăng xuất"><LogOut /><span>Đăng xuất</span></button></header>
+      <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileOpen(true)} aria-label="Mở menu"><Menu /></button><button className="mobile-brand" onClick={() => navigate("/")} aria-label="Về Tổng quan"><span className="brand-mark"><HeartHandshake /></span></button><div className="topbar-spacer" />{activePath === "/alerts" && <span className="topbar-protection"><ShieldCheck /> Đang bảo vệ</span>}<Tooltip content={`Giao diện: ${theme === "light" ? "Sáng" : theme === "dark" ? "Tối" : "Theo hệ thống"}`}><IconButton className="theme-toggle" variant="secondary" label="Chuyển chế độ giao diện" onClick={cycleTheme}>{theme === "light" ? <Sun /> : theme === "dark" ? <Moon /> : <Monitor />}</IconButton></Tooltip><div className="account-control" ref={accountRef}><button type="button" className="account-trigger" aria-label="Mở menu tài khoản" aria-haspopup="menu" aria-expanded={accountOpen} onClick={() => setAccountOpen((open) => !open)}><span className="avatar small">{user.name[0]}</span><span className="account-trigger-copy"><strong>{user.name}</strong><small>{user.role === "admin" ? "Quản trị viên" : "Người chăm sóc"}</small></span><ChevronDown className="account-chevron" /></button>{accountOpen && <div className="account-menu" role="menu"><div className="account-menu-header"><span className="avatar small">{user.name[0]}</span><span><strong>{user.name}</strong><small>{user.role === "admin" ? "Quản trị viên" : "Người chăm sóc"}</small></span></div><div className="account-menu-divider" /><button type="button" className="account-logout" role="menuitem" onClick={requestLogout}><LogOut /><span>Đăng xuất</span></button></div>}</div></header>
       <div className={`route-content ${activeNav === "Tổng quan" ? "overview-route" : ""} ${activePath === "/history" ? "history-route" : ""} ${activePath === "/family" ? "family-route" : ""}`} key={`${activePath}-${routeRevision}`}><RouteContent path={activePath} /></div>
     </main>
     {isMobileLayout && <nav className="mobile-bottom-nav" aria-label="Điều hướng nhanh trên điện thoại">{navItems.slice(0,4).map(({ label,path,icon:Icon }) => { const badge = path === "/alerts" ? unreadAlerts : 0; return <a key={path} href={path} className={activePath === path ? "active" : ""} onClick={(event) => { event.preventDefault(); navigate(path); }} aria-current={activePath === path ? "page" : undefined}><span className="mobile-nav-icon"><Icon />{badge > 0 ? <span className="mobile-nav-badge">{badge > 99 ? "99+" : badge}</span> : null}</span><span>{label}</span></a>; })}<button type="button" className={navItems.slice(4).some(({ path }) => path === activePath) ? "active" : ""} onClick={() => setMobileOpen(true)} aria-expanded={mobileOpen}><MoreHorizontal /><span>Thêm</span></button></nav>}
+    {logoutConfirmOpen && <div className="logout-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !logoutPending) setLogoutConfirmOpen(false); }}><section className="logout-dialog" role="alertdialog" aria-modal="true" aria-labelledby="logout-dialog-title" aria-describedby="logout-dialog-description"><span className="logout-dialog-icon"><LogOut /></span><h2 id="logout-dialog-title">Đăng xuất</h2><p id="logout-dialog-description">Bạn có chắc chắn muốn đăng xuất không?</p>{logoutError && <p className="logout-dialog-error" role="alert">{logoutError}</p>}<div className="logout-dialog-actions"><button ref={cancelLogoutRef} type="button" className="logout-cancel" disabled={logoutPending} onClick={() => setLogoutConfirmOpen(false)}>Hủy</button><button type="button" className="logout-confirm" disabled={logoutPending} onClick={() => void confirmLogout()}>{logoutPending ? "Đang đăng xuất…" : "Đăng xuất"}</button></div></section></div>}
   </div>;
 }
 
@@ -109,7 +148,7 @@ function App() {
   useEffect(() => { me().then(setUser).catch(() => setUser(null)).finally(() => setChecking(false)); }, []);
   if (checking) return <div className="auth-loading" aria-label="Đang tải">Đang tải…</div>;
   if (!user || user.force_password_change) return <LoginPage user={user} onAuthenticated={setUser} />;
-  return <DashboardApp user={user} onLogout={() => void logout().finally(() => setUser(null))} />;
+  return <DashboardApp user={user} onLogout={async () => { await logout(); setUser(null); }} />;
 }
 
 export default App;

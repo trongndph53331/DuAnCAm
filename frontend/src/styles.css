@@ -583,3 +583,69 @@ html, body, #root { height: 100%; min-height: 0; overflow: hidden; }
 :root[data-theme="dark"] .mobile-bottom-nav :is(a, button).active { color: var(--primary); background: var(--primary-subtle); }
 :root[data-theme="dark"] .logout-button { color: var(--text-secondary); }
 :root[data-theme="dark"] .logout-button:hover { color: var(--text-primary); background: var(--interactive-hover); }
+
+/* Header account menu and logout confirmation. */
+.account-control { position: relative; flex: 0 0 auto; }
+.account-trigger {
+  min-height: 52px;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-primary);
+  background: transparent;
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
+}
+.account-trigger:hover, .account-trigger[aria-expanded="true"] { background: var(--interactive-hover); border-color: var(--border-default); }
+.account-trigger-copy { min-width: 0; text-align: left; }
+.account-trigger-copy strong, .account-trigger-copy small { display: block; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-trigger-copy strong { font-size: 14px; }
+.account-trigger-copy small, .account-menu-header small { margin-top: 2px; color: var(--text-secondary); font-size: 12px; }
+.account-chevron { width: 16px; height: 16px; color: var(--text-muted); transition: transform var(--transition-fast); }
+.account-trigger[aria-expanded="true"] .account-chevron { transform: rotate(180deg); }
+.account-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 120;
+  width: 280px;
+  max-width: calc(100vw - 24px);
+  padding: 8px;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+.account-menu-header { min-width: 0; padding: 10px; display: flex; align-items: center; gap: 12px; }
+.account-menu-header > span:last-child { min-width: 0; }
+.account-menu-header strong, .account-menu-header small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-menu-divider { height: 1px; margin: 4px 0; background: var(--divider); }
+.account-logout { width: 100%; min-height: 44px; padding: 0 12px; border: 0; border-radius: var(--radius-md); display: flex; align-items: center; gap: 10px; color: var(--danger); background: transparent; font-weight: 700; cursor: pointer; }
+.account-logout:hover, .account-logout:focus-visible { background: var(--danger-subtle); }
+.account-logout svg { width: 18px; height: 18px; }
+
+.logout-dialog-backdrop { position: fixed; inset: 0; z-index: 1400; padding: 20px; display: grid; place-items: center; background: var(--overlay); }
+.logout-dialog { width: min(420px, 100%); padding: 24px; color: var(--text-primary); background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); text-align: center; }
+.logout-dialog-icon { width: 48px; height: 48px; margin: 0 auto 14px; border-radius: var(--radius-lg); display: grid; place-items: center; color: var(--danger); background: var(--danger-subtle); }
+.logout-dialog h2 { margin: 0 0 8px; font-size: 21px; }
+.logout-dialog p { margin: 0; color: var(--text-secondary); line-height: 1.55; }
+.logout-dialog-error { margin-top: 12px !important; color: var(--danger) !important; font-size: 13px; }
+.logout-dialog-actions { margin-top: 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.logout-dialog-actions button { min-height: 44px; padding: 0 16px; border-radius: var(--radius-md); font-weight: 700; cursor: pointer; }
+.logout-dialog-actions button:disabled { opacity: .6; cursor: wait; }
+.logout-cancel { color: var(--text-primary); background: var(--bg-surface); border: 1px solid var(--border-default); }
+.logout-cancel:hover:not(:disabled) { background: var(--interactive-hover); }
+.logout-confirm { color: var(--text-inverse); background: var(--danger); border: 1px solid var(--danger); }
+.logout-confirm:hover:not(:disabled) { filter: brightness(.92); }
+
+@media (max-width: 767px) {
+  .account-trigger { width: 44px; min-width: 44px; min-height: 44px; padding: 2px; justify-content: center; }
+  .account-trigger-copy, .account-chevron { display: none; }
+  .account-menu { position: fixed; top: 72px; right: 12px; width: 280px; max-width: calc(100vw - 24px); }
+  .logout-dialog-backdrop { padding: 14px; }
+  .logout-dialog { padding: 22px 18px 18px; }
+}
