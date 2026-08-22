@@ -15,7 +15,13 @@ VN_TZ = timezone(timedelta(hours=7))
 
 def git(cmd):
     try:
-        return subprocess.check_output(cmd, shell=True, text=True, stderr=subprocess.DEVNULL).strip()
+        return subprocess.check_output(
+            cmd.split(),
+            shell=False,
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=2,
+        ).strip()
     except Exception:
         return ""
 
