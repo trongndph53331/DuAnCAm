@@ -123,16 +123,29 @@
 
 /* Desktop: the route stays fixed to the app viewport and only table rows scroll. */
 @media(min-width:901px){
-  .route-content.history-route{height:100%;min-height:0;overflow:hidden!important}
-  .history-route .history-page{height:100%!important;min-height:0!important;padding-bottom:16px!important;overflow:hidden!important;display:flex!important;flex-direction:column}
+  .route-content.history-route{height:100%;min-height:0;overflow-x:hidden!important;overflow-y:auto!important}
+  .history-route .history-page{height:auto!important;min-height:100%!important;padding-bottom:12px!important;overflow:visible!important;display:flex!important;flex-direction:column}
   .history-route .history-heading,.history-route .history-filter-summary,.history-route .history-filter-panel,.history-route .history-list-heading,.history-route .history-pagination{flex:0 0 auto}
-  .history-route .history-list-heading{margin-top:12px}
-  .history-route .history-pagination{position:static!important;inset:auto!important;transform:none!important;clear:both;margin-top:8px!important}
-  .history-route .history-pagination-top{margin-bottom:8px!important}
-  .history-route .history-pagination-bottom{margin-top:8px!important}
-  .history-route .history-table-wrap{height:auto!important;min-height:120px!important;max-height:none!important;flex:1 1 auto;overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain;scrollbar-gutter:stable}
+  .history-route .history-heading{margin-bottom:8px}
+  .history-route .history-filter-summary{margin-bottom:6px}
+  .history-route .history-list-heading{margin:6px 3px 4px}
+  .history-route .history-pagination{min-height:46px;padding:4px 10px;position:static!important;inset:auto!important;transform:none!important;clear:both;margin-top:4px!important;gap:10px}
+  .history-route .history-pagination-top{margin-top:0!important;margin-bottom:4px!important}
+  .history-route .history-pagination-bottom{margin-top:4px!important}
+  .history-route .history-pagination :where(button,select){height:38px;min-height:38px}
+  .history-route .history-pagination button{min-width:38px;padding-inline:7px}
+  .history-route .history-table-wrap{height:clamp(420px,calc(100dvh - 410px),680px)!important;min-height:420px!important;max-height:680px!important;flex:0 0 auto;overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain;scrollbar-gutter:stable}
   .history-route .history-table{min-width:0;width:100%;table-layout:fixed}
+  .history-route .history-table th:nth-child(1){width:8%}
+  .history-route .history-table th:nth-child(2){width:15%}
+  .history-route .history-table th:nth-child(3){width:31%}
+  .history-route .history-table th:nth-child(4){width:20%}
+  .history-route .history-table th:nth-child(5){width:18%}
+  .history-route .history-table th:nth-child(6){width:8%}
   .history-route .history-table thead th{position:sticky;z-index:2;top:0;background:var(--bg-surface);box-shadow:0 1px 0 var(--divider)}
+  .history-route .history-table td{height:60px;padding-top:6px;padding-bottom:6px}
+  .history-route .history-table td:nth-child(3)>strong,.history-route .history-table td:nth-child(3)>.severity-dot{width:auto;margin:0 0 0 6px;display:inline-flex;vertical-align:middle}
+  .history-route .table-thumb,.history-route .table-thumb .history-thumbnail{width:48px;height:48px;min-height:48px}
   .history-route .history-mobile-list{display:none!important}
 }
 
