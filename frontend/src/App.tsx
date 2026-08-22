@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BarChart3, Bell, Camera, HeartHandshake, History, Home, LogOut, Menu, Monitor, Moon, Settings, ShieldCheck, Sun, UsersRound } from "lucide-react";
+import { BarChart3, Bell, Camera, HeartHandshake, History, Home, LogOut, Menu, Monitor, Moon, MoreHorizontal, Settings, ShieldCheck, Sun, UsersRound } from "lucide-react";
 import AlertsPage from "./features/alerts/AlertsPage";
 import CameraPage from "./pages/CameraPage";
 import FamilyPage from "./pages/FamilyPage";
@@ -37,10 +37,10 @@ function DashboardApp({ user, onLogout }: { user: AuthUser; onLogout: () => void
   const [routeRevision, setRouteRevision] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
-  const [isMobileLayout, setIsMobileLayout] = useState(() => window.matchMedia("(max-width: 860px)").matches);
+  const [isMobileLayout, setIsMobileLayout] = useState(() => window.matchMedia("(max-width: 767px)").matches);
 
   useEffect(() => {
-    const mobileQuery = window.matchMedia("(max-width: 860px)");
+    const mobileQuery = window.matchMedia("(max-width: 767px)");
     const syncLayout = () => { setIsMobileLayout(mobileQuery.matches); setMobileOpen(false); };
     const syncRoute = () => { setActivePath(currentPath()); setRouteRevision((value) => value + 1); };
     syncLayout(); mobileQuery.addEventListener("change", syncLayout); window.addEventListener("resize", syncLayout); window.visualViewport?.addEventListener("resize", syncLayout); window.addEventListener("popstate", syncRoute);
@@ -81,15 +81,15 @@ function DashboardApp({ user, onLogout }: { user: AuthUser; onLogout: () => void
   return <div className={`app-shell ${isMobileLayout ? "mobile-layout" : "desktop-layout"} ${activePath === "/alerts" ? "alerts-active" : ""}`}>
     <aside className={`sidebar ${mobileOpen ? "is-open" : ""}`} aria-label="Điều hướng chính" aria-hidden={isMobileLayout && !mobileOpen}>
       <button className="brand brand-link" onClick={() => navigate("/")} aria-label="Về Tổng quan" title="GuardianCam Local Hub"><span className="brand-mark"><HeartHandshake /></span><span><strong>GuardianCam</strong><small>Local Hub</small></span></button>
-      <nav>{visibleNav.map(({ label, path, icon: Icon }) => { const badge = path === "/alerts" ? unreadAlerts : 0; return <a key={path} href={path} title={label} className={`nav-item ${activePath === path ? "active" : ""}`} onClick={(event) => { event.preventDefault(); navigate(path); }} aria-current={activePath === path ? "page" : undefined}><Icon /><span>{label}</span>{badge > 0 ? <span className="nav-badge" aria-label={`${badge} cảnh báo chưa đọc`}>{badge > 99 ? "99+" : badge}</span> : null}</a>; })}</nav>
+      <nav>{visibleNav.map(({ label, path, icon: Icon }) => { const badge = path === "/alerts" ? unreadAlerts : 0; return <a key={path} href={path} title={label} data-tooltip={label} className={`nav-item ${activePath === path ? "active" : ""}`} onClick={(event) => { event.preventDefault(); navigate(path); }} aria-current={activePath === path ? "page" : undefined}><Icon /><span>{label}</span>{badge > 0 ? <span className="nav-badge" aria-label={`${badge} cảnh báo chưa đọc`}>{badge > 99 ? "99+" : badge}</span> : null}</a>; })}</nav>
       <div className="privacy-note"><ShieldCheck /><div><strong>Dữ liệu được bảo vệ</strong><span>Xử lý cục bộ, không gửi video thô lên cloud.</span></div></div>
     </aside>
     {isMobileLayout && mobileOpen && <button className="scrim" aria-label="Đóng menu" onClick={() => setMobileOpen(false)} />}
     <main className="main-content">
-      <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileOpen(true)} aria-label="Mở menu"><Menu /></button><div className="topbar-spacer" />{activePath === "/alerts" && <span className="topbar-protection"><ShieldCheck /> Đang bảo vệ</span>}<Tooltip content={`Giao diện: ${theme === "light" ? "Sáng" : theme === "dark" ? "Tối" : "Theo hệ thống"}`}><IconButton className="theme-toggle" variant="secondary" label="Chuyển chế độ giao diện" onClick={cycleTheme}>{theme === "light" ? <Sun /> : theme === "dark" ? <Moon /> : <Monitor />}</IconButton></Tooltip><div className="profile"><span className="avatar small">{user.name[0]}</span><span><strong>{user.name}</strong><small>{user.role === "admin" ? "Quản trị viên" : "Người chăm sóc"}</small></span></div><button className="logout-button" onClick={onLogout} title="Đăng xuất"><LogOut /><span>Đăng xuất</span></button></header>
+      <header className="topbar"><button className="icon-button menu-button" onClick={() => setMobileOpen(true)} aria-label="Mở menu"><Menu /></button><button className="mobile-brand" onClick={() => navigate("/")} aria-label="Về Tổng quan"><span className="brand-mark"><HeartHandshake /></span></button><div className="topbar-spacer" />{activePath === "/alerts" && <span className="topbar-protection"><ShieldCheck /> Đang bảo vệ</span>}<Tooltip content={`Giao diện: ${theme === "light" ? "Sáng" : theme === "dark" ? "Tối" : "Theo hệ thống"}`}><IconButton className="theme-toggle" variant="secondary" label="Chuyển chế độ giao diện" onClick={cycleTheme}>{theme === "light" ? <Sun /> : theme === "dark" ? <Moon /> : <Monitor />}</IconButton></Tooltip><div className="profile"><span className="avatar small">{user.name[0]}</span><span><strong>{user.name}</strong><small>{user.role === "admin" ? "Quản trị viên" : "Người chăm sóc"}</small></span></div><button className="logout-button" onClick={onLogout} title="Đăng xuất"><LogOut /><span>Đăng xuất</span></button></header>
       <div className={`route-content ${activeNav === "Tổng quan" ? "overview-route" : ""} ${activePath === "/history" ? "history-route" : ""} ${activePath === "/family" ? "family-route" : ""}`} key={`${activePath}-${routeRevision}`}><RouteContent path={activePath} /></div>
     </main>
-    {isMobileLayout && <nav className="mobile-bottom-nav" aria-label="Điều hướng nhanh trên điện thoại">{navItems.slice(0,4).map(({ label,path,icon:Icon }) => { const badge = path === "/alerts" ? unreadAlerts : 0; return <a key={path} href={path} className={activePath === path ? "active" : ""} onClick={(event) => { event.preventDefault(); navigate(path); }} aria-current={activePath === path ? "page" : undefined}><span className="mobile-nav-icon"><Icon />{badge > 0 ? <span className="mobile-nav-badge">{badge > 99 ? "99+" : badge}</span> : null}</span><span>{label}</span></a>; })}</nav>}
+    {isMobileLayout && <nav className="mobile-bottom-nav" aria-label="Điều hướng nhanh trên điện thoại">{navItems.slice(0,4).map(({ label,path,icon:Icon }) => { const badge = path === "/alerts" ? unreadAlerts : 0; return <a key={path} href={path} className={activePath === path ? "active" : ""} onClick={(event) => { event.preventDefault(); navigate(path); }} aria-current={activePath === path ? "page" : undefined}><span className="mobile-nav-icon"><Icon />{badge > 0 ? <span className="mobile-nav-badge">{badge > 99 ? "99+" : badge}</span> : null}</span><span>{label}</span></a>; })}<button type="button" className={navItems.slice(4).some(({ path }) => path === activePath) ? "active" : ""} onClick={() => setMobileOpen(true)} aria-expanded={mobileOpen}><MoreHorizontal /><span>Thêm</span></button></nav>}
   </div>;
 }
 
