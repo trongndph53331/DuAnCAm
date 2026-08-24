@@ -45,7 +45,13 @@ async def list_cameras(request: Request):
 
 @router.get("/demo-scenarios")
 async def list_demo_scenarios():
-    return {"items": [{"id": item["id"], "name": item["name"]} for item in demo_scenario_service.list()]}
+    current_source = camera_service.get_camera(BUILTIN_VIDEO_CAMERA_ID)["source"]
+    return {
+        "items": [
+            {"id": item["id"], "name": item["name"], "active": item["source"] == current_source}
+            for item in demo_scenario_service.list()
+        ]
+    }
 
 
 def _replace_demo_source(request: Request, source_path: str):

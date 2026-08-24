@@ -130,6 +130,9 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
   }, [actionError, actionSuccess]);
 
   const selected = feeds.find((feed) => feed.id === selectedId);
+  const selectedScenarioIsActive = Boolean(
+    scenarioId && scenarios.find((scenario) => scenario.id === scenarioId)?.active,
+  );
   useEffect(() => {
     setRecognitionEnabled(Boolean(selected?.identity_enabled));
   }, [selected?.id, selected?.identity_enabled]);
@@ -188,6 +191,7 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
     try {
       await selectDemoScenario(scenarioId);
       setStreamRevision(Date.now());
+      setScenarios(await getDemoScenarios());
       await load();
       setActionSuccess("Đã áp dụng video cho camera thành công.");
     } catch (reason) {
@@ -479,7 +483,7 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
                 <option value="">{scenarios.length ? "Chọn một kịch bản…" : "Chưa có kịch bản"}</option>
                 {scenarios.map((scenario) => <option value={scenario.id} key={scenario.id}>{scenario.name}</option>)}
               </select>
-              <button type="button" disabled={!scenarioId || saving} onClick={() => void changeScenario()}>
+              <button type="button" disabled={!scenarioId || selectedScenarioIsActive || saving} onClick={() => void changeScenario()} title={selectedScenarioIsActive ? "Video này đang được phát" : "Áp dụng video đã chọn"}>
                 {saving ? <RefreshCw className="spin" /> : <Video />} Áp dụng
               </button>
               <button className="demo-delete-button" type="button" disabled={!scenarioId || saving} onClick={() => setScenarioToDelete(scenarios.find((item) => item.id === scenarioId) ?? null)}>

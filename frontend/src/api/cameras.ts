@@ -38,7 +38,7 @@ export async function getCameras(): Promise<CameraDto[]> {
   return response.items;
 }
 
-export interface DemoScenarioDto { id: string; name: string }
+export interface DemoScenarioDto { id: string; name: string; active?: boolean }
 
 export async function getDemoScenarios(): Promise<DemoScenarioDto[]> {
   const response = await apiClient<{ items: DemoScenarioDto[] }>("/cameras/demo-scenarios");
