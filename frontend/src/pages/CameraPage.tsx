@@ -45,6 +45,9 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
   const [error, setError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [actionSuccess, setActionSuccess] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [scenarioToDelete, setScenarioToDelete] = useState<DemoScenarioDto | null>(null);
   const [scenarios, setScenarios] = useState<DemoScenarioDto[]>([]);
   const [scenarioId, setScenarioId] = useState("");
   const [scenarioName, setScenarioName] = useState("");
@@ -166,13 +169,19 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
     }
   };
   const changeScenario = async () => {
-    if (!scenarioId || saving) return;
+    if (saving) return;
+    if (!scenarioId) {
+      setActionError("Vui lòng chọn một kịch bản trước khi áp dụng.");
+      return;
+    }
     setActionError("");
+    setActionSuccess("");
     setSaving(true);
     try {
       await selectDemoScenario(scenarioId);
       setStreamRevision(Date.now());
       await load();
+      setActionSuccess("Đã áp dụng video cho camera thành công.");
     } catch (reason) {
       setActionError(reason instanceof Error ? reason.message : "Không thể đổi kịch bản demo.");
     } finally {
@@ -180,17 +189,18 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
     }
   };
   const removeScenario = async () => {
-    if (!scenarioId || saving) return;
-    const scenario = scenarios.find((item) => item.id === scenarioId);
-    if (!window.confirm(`Xóa video "${scenario?.name ?? "kịch bản này"}"?`)) return;
+    if (!scenarioToDelete || saving) return;
     setActionError("");
+    setActionSuccess("");
     setSaving(true);
     try {
-      await deleteDemoScenario(scenarioId);
+      await deleteDemoScenario(scenarioToDelete.id);
       setScenarios(await getDemoScenarios());
       setScenarioId("");
+      setScenarioToDelete(null);
       setStreamRevision(Date.now());
       await load();
+      setActionSuccess("Đã xóa video thành công.");
     } catch (reason) {
       setActionError(reason instanceof Error ? reason.message : "Không thể xóa video.");
     } finally {
@@ -199,12 +209,27 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
   };
   const uploadVideo = async (file?: File) => {
     if (!file || saving) return;
+    const supportedTypes = ["video/mp4", "video/webm", "video/quicktime"];
+    if (!supportedTypes.includes(file.type) && !/\.(mp4|webm|mov)$/i.test(file.name)) {
+      setActionError("Định dạng không hợp lệ. Vui lòng chọn video MP4, MOV hoặc WebM.");
+      return;
+    }
+    if (file.size === 0) {
+      setActionError("Video đang trống. Vui lòng chọn một tệp khác.");
+      return;
+    }
+    if (file.size > 95 * 1024 * 1024) {
+      setActionError("Video vượt quá 95 MB. Vui lòng chọn video có dung lượng nhỏ hơn.");
+      return;
+    }
     setActionError("");
+    setActionSuccess("");
     setSaving(true);
     try {
       const uploaded = await uploadDemoVideo(file);
       setPendingUpload(uploaded);
       setScenarioName(file.name.replace(/\.[^.]+$/, ""));
+      setNameError("");
     } catch (reason) {
       setActionError(reason instanceof Error ? reason.message : "Không thể tải video lên.");
     } finally {
@@ -213,8 +238,18 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
   };
   const nameUploadedVideo = async () => {
     const name = scenarioName.trim();
-    if (!pendingUpload || !name || saving) return;
+    if (!pendingUpload || saving) return;
+    if (!name) {
+      setNameError("Vui lòng nhập tên cho kịch bản video.");
+      return;
+    }
+    if (name.length > 80) {
+      setNameError("Tên kịch bản không được dài quá 80 ký tự.");
+      return;
+    }
+    setNameError("");
     setActionError("");
+    setActionSuccess("");
     setSaving(true);
     try {
       const result = await completeDemoVideo(pendingUpload.upload_id, name);
@@ -224,6 +259,7 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
       setScenarioName("");
       setStreamRevision(Date.now());
       await load();
+      setActionSuccess(`Đã thêm kịch bản “${name}” và áp dụng cho camera.`);
     } catch (reason) {
       setActionError(reason instanceof Error ? reason.message : "Không thể lưu tên kịch bản.");
     } finally {
@@ -235,6 +271,7 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
     await discardDemoVideo(pendingUpload.upload_id).catch(() => undefined);
     setPendingUpload(null);
     setScenarioName("");
+    setNameError("");
   };
 
   if (loading)
@@ -437,7 +474,7 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
               <button type="button" disabled={!scenarioId || saving} onClick={() => void changeScenario()}>
                 {saving ? <RefreshCw className="spin" /> : <Video />} Áp dụng
               </button>
-              <button className="demo-delete-button" type="button" disabled={!scenarioId || saving} onClick={() => void removeScenario()}>
+              <button className="demo-delete-button" type="button" disabled={!scenarioId || saving} onClick={() => setScenarioToDelete(scenarios.find((item) => item.id === scenarioId) ?? null)}>
                 <Trash2 /> Xóa video
               </button>
               <label className="demo-upload-button">
@@ -454,7 +491,21 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
               </label>
             </div>
             {actionError && <p className="camera-edit-error" role="alert">{actionError}</p>}
+            {actionSuccess && <p className="camera-edit-success" role="status"><Check /> {actionSuccess}</p>}
           </section>
+        )}
+        {scenarioToDelete && (
+          <div className="demo-name-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-video-title">
+            <section className="demo-delete-dialog">
+              <span className="demo-delete-icon"><Trash2 /></span>
+              <h2 id="delete-video-title">Xóa video này?</h2>
+              <p>Kịch bản <strong>“{scenarioToDelete.name}”</strong> và tệp video của nó sẽ bị xóa. Thao tác này không thể hoàn tác.</p>
+              <div>
+                <button type="button" disabled={saving} onClick={() => setScenarioToDelete(null)}>Giữ lại</button>
+                <button className="danger" type="button" disabled={saving} onClick={() => void removeScenario()}>{saving ? <RefreshCw className="spin" /> : <Trash2 />} {saving ? "Đang xóa…" : "Xóa video"}</button>
+              </div>
+            </section>
+          </div>
         )}
         {pendingUpload && (
           <div className="demo-name-backdrop" role="dialog" aria-modal="true" aria-labelledby="demo-name-title">
@@ -466,14 +517,16 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
                 value={scenarioName}
                 maxLength={80}
                 autoFocus
-                required
                 disabled={saving}
                 placeholder="Tên kịch bản"
-                onChange={(event) => setScenarioName(event.target.value)}
+                aria-invalid={Boolean(nameError)}
+                aria-describedby={nameError ? "demo-name-error" : undefined}
+                onChange={(event) => { setScenarioName(event.target.value); if (nameError) setNameError(""); }}
               />
+              {nameError && <span id="demo-name-error" className="demo-field-error" role="alert"><AlertTriangle /> {nameError}</span>}
               <div>
                 <button type="button" disabled={saving} onClick={() => void cancelUploadedVideo()}>Hủy</button>
-                <button type="submit" disabled={saving || !scenarioName.trim()}>{saving ? "Đang lưu…" : "Lưu và áp dụng"}</button>
+                <button type="submit" disabled={saving}>{saving ? "Đang lưu…" : "Lưu và áp dụng"}</button>
               </div>
             </form>
           </div>
