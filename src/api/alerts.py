@@ -18,7 +18,7 @@ async def get_alerts(_user: dict = Depends(current_user)):
 
 
 @router.get("/stream")
-async def stream_alerts():
+async def stream_alerts(_user: dict = Depends(current_user)):
     async def events():
         yield "event: ready\ndata: {}\n\n"
         async for message in alert_broadcaster.subscribe():

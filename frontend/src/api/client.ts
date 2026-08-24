@@ -25,6 +25,10 @@ export function resolveBackendUrl(url: string | null | undefined): string {
 
 let authToken = localStorage.getItem("antam_token") ?? sessionStorage.getItem("antam_token");
 
+export function getAuthToken(): string | null {
+  return authToken;
+}
+
 export function setAuthToken(token: string | null, remember: boolean) {
   authToken = token;
   localStorage.removeItem("antam_token");

@@ -94,6 +94,11 @@ async def test_alert_permissions_are_separate_and_current(client, real_auth):
 
 
 @pytest.mark.asyncio
+async def test_alert_stream_requires_authentication(client, real_auth):
+    assert (await client.get("/api/v1/alerts/stream")).status_code == 401
+
+
+@pytest.mark.asyncio
 async def test_caregiver_cannot_grant_permissions_even_with_spoofed_claims(client, real_auth):
     user_id, headers = create_caregiver()
     set_permission(user_id, "manage_users", True)

@@ -26,7 +26,6 @@ import OverviewPage from "./pages/OverviewPage";
 import SettingsPage from "./pages/SettingsPage";
 import StatisticsPage from "./pages/StatisticsPage";
 import { fetchAlerts } from "./features/alerts/alertService";
-import { API_BASE_URL } from "./api/client";
 import { logout, me, type AuthUser } from "./api/auth";
 import LoginPage from "./pages/LoginPage";
 import { IconButton, Tooltip, useTheme } from "./design-system";
@@ -39,6 +38,7 @@ import {
   readAlertSoundEnabled,
   type RealtimeAlertMessage,
 } from "./features/alerts/alertNotifications";
+import { subscribeToAlertStream } from "./features/alerts/alertStream";
 
 const navItems = [
   { label: "Tổng quan", path: "/", icon: Home, badge: undefined },
@@ -174,25 +174,18 @@ function DashboardApp({
     return () => window.removeEventListener(ALERT_SOUND_PREFERENCE_EVENT, syncPreference);
   }, [user.id]);
   useEffect(() => {
-    const stream = new EventSource(`${API_BASE_URL}/alerts/stream`);
     const sync = () =>
       window.dispatchEvent(new CustomEvent("antam:alerts-changed"));
-    const receiveAlert = (event: Event) => {
+    const receiveAlert = (data: string) => {
       sync();
       try {
-        const message = JSON.parse((event as MessageEvent<string>).data) as RealtimeAlertMessage;
+        const message = JSON.parse(data) as RealtimeAlertMessage;
         alertControllerRef.current?.handle(message, !loggingOutRef.current);
       } catch {
         // A malformed realtime message can still trigger the normal list refresh.
       }
     };
-    stream.addEventListener("ready", sync);
-    stream.addEventListener("alert", receiveAlert);
-    return () => {
-      stream.removeEventListener("ready", sync);
-      stream.removeEventListener("alert", receiveAlert);
-      stream.close();
-    };
+    return subscribeToAlertStream({ onReady: sync, onAlert: receiveAlert });
   }, []);
   useEffect(() => () => {
     if (alertToastTimerRef.current) window.clearTimeout(alertToastTimerRef.current);
