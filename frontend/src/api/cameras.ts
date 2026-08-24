@@ -38,6 +38,10 @@ export async function getCameras(): Promise<CameraDto[]> {
   return response.items;
 }
 
+export function createMockCamera(data: FormData): Promise<CameraDto> {
+  return apiClient("/cameras/mock", { method: "POST", body: data });
+}
+
 export function getCamera(id: string): Promise<CameraDto> {
   return apiClient(`/cameras/${encodeURIComponent(id)}`);
 }

@@ -11,13 +11,14 @@ export function setAuthToken(token: string | null, remember: boolean) {
 }
 
 async function apiResponse(path: string, init?: RequestInit): Promise<Response> {
+  const headers = new Headers(init?.headers);
+  if (!(init?.body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (authToken) headers.set("Authorization", `Bearer ${authToken}`);
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-      ...init?.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {
