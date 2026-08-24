@@ -8,6 +8,21 @@ const deployedApiBaseUrl =
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? deployedApiBaseUrl;
 
+export function resolveBackendUrl(url: string | null | undefined): string {
+  if (!url) return "";
+  if (/^https?:\/\//i.test(url)) return url;
+
+  if (url.startsWith("/api/v1")) {
+    return `${API_BASE_URL}${url.slice("/api/v1".length)}`;
+  }
+
+  if (API_BASE_URL.startsWith("http")) {
+    return new URL(url, API_BASE_URL).toString();
+  }
+
+  return url;
+}
+
 let authToken = localStorage.getItem("antam_token") ?? sessionStorage.getItem("antam_token");
 
 export function setAuthToken(token: string | null, remember: boolean) {

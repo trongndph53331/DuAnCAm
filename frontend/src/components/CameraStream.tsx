@@ -1,3 +1,5 @@
+import { resolveBackendUrl } from "../api/client";
+
 interface CameraStreamProps {
   cameraId: string;
   streamReady?: boolean;
@@ -11,8 +13,9 @@ interface CameraStreamProps {
 
 export function CameraStream({ cameraId, streamReady, streamUrl, className, onError, showBoxes=true, showIdentity=true }: CameraStreamProps) {
   if (streamReady && streamUrl) {
-    const separator=streamUrl.includes("?")?"&":"?";
-    const configured=`${streamUrl}${separator}boxes=${showBoxes}&identity=${showIdentity}`;
+    const resolvedStreamUrl=resolveBackendUrl(streamUrl);
+    const separator=resolvedStreamUrl.includes("?")?"&":"?";
+    const configured=`${resolvedStreamUrl}${separator}boxes=${showBoxes}&identity=${showIdentity}`;
     const streamClassName=["camera-stream-image",className].filter(Boolean).join(" ");
     return <img className={streamClassName} src={configured} alt={`Luồng trực tiếp ${cameraId}`} onError={onError} />;
   }

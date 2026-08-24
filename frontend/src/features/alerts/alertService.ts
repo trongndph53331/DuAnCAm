@@ -1,4 +1,4 @@
-import { apiClient } from "../../api/client";
+import { apiClient, resolveBackendUrl } from "../../api/client";
 import type { AlertEvent, AlertSeverity, AlertStatus, AlertType } from "./alert.types";
 
 interface BackendAlert {
@@ -66,7 +66,7 @@ function toAlertEvent(alert: BackendAlert): AlertEvent {
     time: new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit" }).format(new Date(occurredAt)),
     timestamp: occurredAt, severity: alert.severity ?? presentation.severity, status: normalizeStatus(alert.status),
     unread: !alert.is_read, preview: alert.description, confidence,
-    immobileSeconds: alert.immobile_seconds ?? undefined, snapshotUrl: alert.snapshot_url ?? undefined,
+    immobileSeconds: alert.immobile_seconds ?? undefined, snapshotUrl: alert.snapshot_url ? resolveBackendUrl(alert.snapshot_url) : undefined,
     reviewNote: alert.review_note ?? undefined,
     agentStatus: alert.agent_status ?? undefined,
     agentVerdict: alert.agent_verdict ?? undefined,
