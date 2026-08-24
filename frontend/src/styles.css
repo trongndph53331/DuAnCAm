@@ -588,8 +588,6 @@ html, body, #root { height: 100%; min-height: 0; overflow: hidden; }
 :root[data-theme="dark"] .logout-button { color: var(--text-secondary); }
 :root[data-theme="dark"] .logout-button:hover { color: var(--text-primary); background: var(--interactive-hover); }
 :root[data-theme="dark"] .realtime-alert-toast,:root[data-theme="dark"] .alert-sound-permission{background:var(--bg-elevated);border-color:var(--border-strong);box-shadow:0 18px 48px rgba(0,0,0,.42)}
-.realtime-alert-toast .toast-mute-speech{flex:0 0 auto;border:1px solid var(--border-default);border-radius:9px;padding:7px 9px;background:var(--bg-subtle);color:var(--text-primary);font-weight:700;cursor:pointer}.speech-permission{top:248px}.speech-permission.standalone{top:84px}
-@media(max-width:600px){.realtime-alert-toast .toast-mute-speech{font-size:11px;padding:6px}.speech-permission{top:234px}}
 
 /* Header account menu and logout confirmation. */
 .account-control { position: relative; flex: 0 0 auto; }
