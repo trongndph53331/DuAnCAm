@@ -52,6 +52,10 @@ export function selectDemoScenario(scenarioId: string): Promise<CameraDto> {
   });
 }
 
+export function deleteDemoScenario(scenarioId: string): Promise<void> {
+  return apiCommand(`/cameras/demo-scenarios/${encodeURIComponent(scenarioId)}`, { method: "DELETE" });
+}
+
 export interface PendingDemoUploadDto { upload_id: string; filename: string }
 
 export function uploadDemoVideo(video: File): Promise<PendingDemoUploadDto> {

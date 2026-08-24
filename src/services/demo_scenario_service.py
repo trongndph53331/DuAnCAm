@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from pathlib import Path
 from typing import Any
@@ -29,11 +31,22 @@ class DemoScenarioService:
         items = self.list()
         scenario = {"id": str(uuid4()), "name": name.strip(), "source": source}
         items.append(scenario)
+        self._write(items)
+        return scenario
+
+    def delete(self, scenario_id: str) -> dict[str, str] | None:
+        items = self.list()
+        scenario = next((item for item in items if item["id"] == scenario_id), None)
+        if scenario is None:
+            return None
+        self._write([item for item in items if item["id"] != scenario_id])
+        return scenario
+
+    def _write(self, items: list[dict[str, str]]) -> None:
         self.metadata_path.parent.mkdir(parents=True, exist_ok=True)
         temporary = self.metadata_path.with_suffix(".tmp")
         temporary.write_text(json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")
         temporary.replace(self.metadata_path)
-        return scenario
 
 
 demo_scenario_service = DemoScenarioService()

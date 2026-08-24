@@ -93,3 +93,17 @@ async def test_upload_rejects_unsupported_video(client, admin_api, demo_scenario
         files={"video": ("bad.avi", b"not-supported", "video/x-msvideo")},
     )
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_admin_can_delete_uploaded_scenario_without_deleting_camera(client, admin_api, demo_scenario_metadata):
+    completed = await _upload_and_complete(client, "Kịch bản cần xóa")
+    scenario_id = completed.json()["scenario"]["id"]
+    source_path = Path(completed.json()["camera"]["source"])
+    assert source_path.exists()
+
+    deleted = await client.delete(f"/api/v1/cameras/demo-scenarios/{scenario_id}")
+    assert deleted.status_code == 204
+    assert not source_path.exists()
+    assert (await client.get("/api/v1/cameras/demo-scenarios")).json()["items"] == []
+    assert (await client.get("/api/v1/cameras")).json()["total"] == 1

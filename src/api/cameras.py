@@ -50,6 +50,7 @@ async def list_demo_scenarios():
 
 def _replace_demo_source(request: Request, source_path: str):
     camera_service.update_source(BUILTIN_VIDEO_CAMERA_ID, "video_file", source_path, source_path)
+    camera_service.set_camera_enabled(BUILTIN_VIDEO_CAMERA_ID, True)
     runtime = request.app.state.local_runtime
     runtime.restart_camera_if_enabled(BUILTIN_VIDEO_CAMERA_ID)
     return camera_service.get_camera(BUILTIN_VIDEO_CAMERA_ID, runtime.camera, runtime.vision, runtime.frame_hub)
@@ -67,6 +68,25 @@ async def select_demo_scenario(
         return _replace_demo_source(request, scenario["source"])
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.delete("/demo-scenarios/{scenario_id}", status_code=204)
+async def delete_demo_scenario(
+    scenario_id: str, request: Request, _admin: dict = Depends(require_admin)
+):
+    scenario = demo_scenario_service.get(scenario_id)
+    if scenario is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy kịch bản demo")
+
+    current = camera_service.get_camera(BUILTIN_VIDEO_CAMERA_ID)
+    if current["source"] == scenario["source"]:
+        request.app.state.local_runtime.set_camera_enabled(BUILTIN_VIDEO_CAMERA_ID, False)
+
+    demo_scenario_service.delete(scenario_id)
+    try:
+        Path(camera_service.resolve_video_path(scenario["source"])).unlink(missing_ok=True)
+    except ValueError:
+        pass
 
 
 @router.post("/demo-video")

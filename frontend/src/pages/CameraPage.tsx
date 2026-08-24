@@ -8,6 +8,7 @@ import {
   Minimize,
   RefreshCw,
   ShieldCheck,
+  Trash2,
   Upload,
   UserSearch,
   Video,
@@ -16,6 +17,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   completeDemoVideo,
+  deleteDemoScenario,
   discardDemoVideo,
   getCamera,
   getCameras,
@@ -173,6 +175,24 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
       await load();
     } catch (reason) {
       setActionError(reason instanceof Error ? reason.message : "Không thể đổi kịch bản demo.");
+    } finally {
+      setSaving(false);
+    }
+  };
+  const removeScenario = async () => {
+    if (!scenarioId || saving) return;
+    const scenario = scenarios.find((item) => item.id === scenarioId);
+    if (!window.confirm(`Xóa video "${scenario?.name ?? "kịch bản này"}"?`)) return;
+    setActionError("");
+    setSaving(true);
+    try {
+      await deleteDemoScenario(scenarioId);
+      setScenarios(await getDemoScenarios());
+      setScenarioId("");
+      setStreamRevision(Date.now());
+      await load();
+    } catch (reason) {
+      setActionError(reason instanceof Error ? reason.message : "Không thể xóa video.");
     } finally {
       setSaving(false);
     }
@@ -416,6 +436,9 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
               </select>
               <button type="button" disabled={!scenarioId || saving} onClick={() => void changeScenario()}>
                 {saving ? <RefreshCw className="spin" /> : <Video />} Áp dụng
+              </button>
+              <button className="demo-delete-button" type="button" disabled={!scenarioId || saving} onClick={() => void removeScenario()}>
+                <Trash2 /> Xóa video
               </button>
               <label className="demo-upload-button">
                 <Upload /> Tải video lên
