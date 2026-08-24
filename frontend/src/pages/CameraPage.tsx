@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  completeDemoVideo,
+  discardDemoVideo,
   getCamera,
   getCameras,
   getDemoScenarios,
@@ -24,6 +26,7 @@ import {
   type CameraDto,
   type CameraEventDto,
   type DemoScenarioDto,
+  type PendingDemoUploadDto,
 } from "../api/cameras";
 import { CameraStream } from "../components";
 import "./cameraViewer.css";
@@ -43,6 +46,7 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
   const [scenarios, setScenarios] = useState<DemoScenarioDto[]>([]);
   const [scenarioId, setScenarioId] = useState("");
   const [scenarioName, setScenarioName] = useState("");
+  const [pendingUpload, setPendingUpload] = useState<PendingDemoUploadDto | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const viewerRef = useRef<HTMLDivElement>(null);
   const camerasRequestInFlight = useRef(false);
@@ -172,21 +176,42 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
     }
   };
   const uploadVideo = async (file?: File) => {
-    const name = scenarioName.trim();
-    if (!file || !name || saving) return;
+    if (!file || saving) return;
     setActionError("");
     setSaving(true);
     try {
-      const result = await uploadDemoVideo(name, file);
-      setScenarios(await getDemoScenarios());
-      setScenarioId(result.scenario.id);
-      setScenarioName("");
-      await load();
+      const uploaded = await uploadDemoVideo(file);
+      setPendingUpload(uploaded);
+      setScenarioName(file.name.replace(/\.[^.]+$/, ""));
     } catch (reason) {
       setActionError(reason instanceof Error ? reason.message : "Không thể tải video lên.");
     } finally {
       setSaving(false);
     }
+  };
+  const nameUploadedVideo = async () => {
+    const name = scenarioName.trim();
+    if (!pendingUpload || !name || saving) return;
+    setActionError("");
+    setSaving(true);
+    try {
+      const result = await completeDemoVideo(pendingUpload.upload_id, name);
+      setScenarios(await getDemoScenarios());
+      setScenarioId(result.scenario.id);
+      setPendingUpload(null);
+      setScenarioName("");
+      await load();
+    } catch (reason) {
+      setActionError(reason instanceof Error ? reason.message : "Không thể lưu tên kịch bản.");
+    } finally {
+      setSaving(false);
+    }
+  };
+  const cancelUploadedVideo = async () => {
+    if (!pendingUpload || saving) return;
+    await discardDemoVideo(pendingUpload.upload_id).catch(() => undefined);
+    setPendingUpload(null);
+    setScenarioName("");
   };
 
   if (loading)
@@ -387,20 +412,12 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
               <button type="button" disabled={!scenarioId || saving} onClick={() => void changeScenario()}>
                 {saving ? <RefreshCw className="spin" /> : <Video />} Áp dụng
               </button>
-              <input
-                className="demo-scenario-name"
-                value={scenarioName}
-                maxLength={80}
-                disabled={saving}
-                placeholder="Nhập tên kịch bản"
-                onChange={(event) => setScenarioName(event.target.value)}
-              />
-              <label className={`demo-upload-button ${!scenarioName.trim() ? "disabled" : ""}`}>
+              <label className="demo-upload-button">
                 <Upload /> Tải video lên
                 <input
                   type="file"
                   accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
-                  disabled={saving || !scenarioName.trim()}
+                  disabled={saving}
                   onChange={(event) => {
                     void uploadVideo(event.target.files?.[0]);
                     event.target.value = "";
@@ -410,6 +427,28 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
             </div>
             {actionError && <p className="camera-edit-error" role="alert">{actionError}</p>}
           </section>
+        )}
+        {pendingUpload && (
+          <div className="demo-name-backdrop" role="dialog" aria-modal="true" aria-labelledby="demo-name-title">
+            <form className="demo-name-dialog" onSubmit={(event) => { event.preventDefault(); void nameUploadedVideo(); }}>
+              <h2 id="demo-name-title">Video đã tải lên thành công</h2>
+              <p>Đặt tên để lưu video này thành một kịch bản demo.</p>
+              <small>{pendingUpload.filename}</small>
+              <input
+                value={scenarioName}
+                maxLength={80}
+                autoFocus
+                required
+                disabled={saving}
+                placeholder="Tên kịch bản"
+                onChange={(event) => setScenarioName(event.target.value)}
+              />
+              <div>
+                <button type="button" disabled={saving} onClick={() => void cancelUploadedVideo()}>Hủy</button>
+                <button type="submit" disabled={saving || !scenarioName.trim()}>{saving ? "Đang lưu…" : "Lưu và áp dụng"}</button>
+              </div>
+            </form>
+          </div>
         )}
 
         <section className="smart-camera-actions">

@@ -12,6 +12,18 @@ def _admin():
     return {"id": "admin", "role": "admin", "force_password_change": False}
 
 
+async def _upload_and_complete(client, name: str):
+    uploaded = await client.post(
+        "/api/v1/cameras/demo-video",
+        files={"video": ("custom.webm", b"demo-video", "video/webm")},
+    )
+    assert uploaded.status_code == 200
+    return await client.post(
+        f"/api/v1/cameras/demo-video/{uploaded.json()['upload_id']}/complete",
+        json={"name": name},
+    )
+
+
 @pytest.fixture
 def demo_scenario_metadata(tmp_path):
     original = demo_scenario_service.metadata_path
@@ -43,12 +55,8 @@ async def test_camera_api_exposes_exactly_one_demo_camera(client):
 
 @pytest.mark.asyncio
 async def test_demo_source_changes_require_admin(client, admin_api, demo_scenario_metadata):
-    uploaded = await client.post(
-        "/api/v1/cameras/demo-video",
-        data={"name": "Kịch bản tự tải"},
-        files={"video": ("custom.webm", b"demo-video", "video/webm")},
-    )
-    scenario_id = uploaded.json()["scenario"]["id"]
+    completed = await _upload_and_complete(client, "Kịch bản tự tải")
+    scenario_id = completed.json()["scenario"]["id"]
     app.dependency_overrides.pop(require_admin, None)
     denied = await client.post("/api/v1/cameras/demo-scenario", json={"scenario_id": scenario_id})
     assert denied.status_code == 401
@@ -63,11 +71,7 @@ async def test_demo_source_changes_require_admin(client, admin_api, demo_scenari
 async def test_upload_reuses_demo_camera_record(client, admin_api, demo_scenario_metadata):
     with database_connection() as connection:
         before = connection.execute("SELECT count(*) FROM cameras").fetchone()[0]
-    response = await client.post(
-        "/api/v1/cameras/demo-video",
-        data={"name": "Kịch bản phòng khách"},
-        files={"video": ("custom.webm", b"demo-video", "video/webm")},
-    )
+    response = await _upload_and_complete(client, "Kịch bản phòng khách")
     assert response.status_code == 200
     assert response.json()["camera"]["id"] == BUILTIN_VIDEO_CAMERA_ID
     assert response.json()["scenario"]["name"] == "Kịch bản phòng khách"
@@ -86,7 +90,6 @@ async def test_upload_reuses_demo_camera_record(client, admin_api, demo_scenario
 async def test_upload_rejects_unsupported_video(client, admin_api, demo_scenario_metadata):
     response = await client.post(
         "/api/v1/cameras/demo-video",
-        data={"name": "Video lỗi"},
         files={"video": ("bad.avi", b"not-supported", "video/x-msvideo")},
     )
     assert response.status_code == 422

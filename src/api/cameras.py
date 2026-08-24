@@ -1,8 +1,9 @@
 import asyncio
+import re
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
 from pydantic import BaseModel
 
 from src.api.auth import require_admin
@@ -20,6 +21,19 @@ class IdentityUpdate(BaseModel):
 
 class DemoScenarioUpdate(BaseModel):
     scenario_id: str
+
+
+class DemoScenarioName(BaseModel):
+    name: str
+
+
+def _pending_video(upload_id: str) -> Path:
+    if not re.fullmatch(r"[0-9a-f]{32}", upload_id):
+        raise HTTPException(status_code=404, detail="Không tìm thấy video đang chờ đặt tên")
+    matches = list(UPLOAD_DIRECTORY.glob(f"pending-{upload_id}.*"))
+    if len(matches) != 1 or matches[0].suffix.lower() not in ALLOWED_VIDEO_EXTENSIONS:
+        raise HTTPException(status_code=404, detail="Không tìm thấy video đang chờ đặt tên")
+    return matches[0]
 
 
 @router.get("")
@@ -58,7 +72,6 @@ async def select_demo_scenario(
 @router.post("/demo-video")
 async def upload_demo_video(
     request: Request,
-    name: str = Form(..., min_length=1, max_length=80),
     video: UploadFile = File(...),
     _admin: dict = Depends(require_admin),
 ):
@@ -67,7 +80,8 @@ async def upload_demo_video(
         raise HTTPException(status_code=422, detail="Chỉ hỗ trợ video MP4, MOV hoặc WebM")
 
     UPLOAD_DIRECTORY.mkdir(parents=True, exist_ok=True)
-    target = UPLOAD_DIRECTORY / f"{uuid4().hex}{suffix}"
+    upload_id = uuid4().hex
+    target = UPLOAD_DIRECTORY / f"pending-{upload_id}{suffix}"
     size = 0
     try:
         with target.open("xb") as output:
@@ -79,9 +93,7 @@ async def upload_demo_video(
         if size == 0:
             raise HTTPException(status_code=422, detail="Video tải lên đang trống")
 
-        camera = _replace_demo_source(request, target.as_posix())
-        scenario = demo_scenario_service.add(name, target.as_posix())
-        return {"camera": camera, "scenario": {"id": scenario["id"], "name": scenario["name"]}}
+        return {"upload_id": upload_id, "filename": video.filename or target.name}
     except HTTPException:
         target.unlink(missing_ok=True)
         raise
@@ -90,6 +102,33 @@ async def upload_demo_video(
         raise
     finally:
         await video.close()
+
+
+@router.post("/demo-video/{upload_id}/complete")
+async def complete_demo_video(
+    upload_id: str,
+    data: DemoScenarioName,
+    request: Request,
+    _admin: dict = Depends(require_admin),
+):
+    name = data.name.strip()
+    if not name or len(name) > 80:
+        raise HTTPException(status_code=422, detail="Tên kịch bản phải có từ 1 đến 80 ký tự")
+    pending = _pending_video(upload_id)
+    final_path = UPLOAD_DIRECTORY / f"{uuid4().hex}{pending.suffix.lower()}"
+    pending.replace(final_path)
+    try:
+        camera = _replace_demo_source(request, final_path.as_posix())
+        scenario = demo_scenario_service.add(name, final_path.as_posix())
+        return {"camera": camera, "scenario": {"id": scenario["id"], "name": scenario["name"]}}
+    except Exception:
+        final_path.unlink(missing_ok=True)
+        raise
+
+
+@router.delete("/demo-video/{upload_id}", status_code=204)
+async def discard_demo_video(upload_id: str, _admin: dict = Depends(require_admin)):
+    _pending_video(upload_id).unlink(missing_ok=True)
 
 
 @router.get("/{camera_id}")

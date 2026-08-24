@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { apiClient, apiCommand } from "./client";
 
 export interface CameraEventDto {
   id: string;
@@ -52,11 +52,23 @@ export function selectDemoScenario(scenarioId: string): Promise<CameraDto> {
   });
 }
 
-export function uploadDemoVideo(name: string, video: File): Promise<{ camera: CameraDto; scenario: DemoScenarioDto }> {
+export interface PendingDemoUploadDto { upload_id: string; filename: string }
+
+export function uploadDemoVideo(video: File): Promise<PendingDemoUploadDto> {
   const data = new FormData();
-  data.append("name", name);
   data.append("video", video);
   return apiClient("/cameras/demo-video", { method: "POST", body: data });
+}
+
+export function completeDemoVideo(uploadId: string, name: string): Promise<{ camera: CameraDto; scenario: DemoScenarioDto }> {
+  return apiClient(`/cameras/demo-video/${encodeURIComponent(uploadId)}/complete`, {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function discardDemoVideo(uploadId: string): Promise<void> {
+  return apiCommand(`/cameras/demo-video/${encodeURIComponent(uploadId)}`, { method: "DELETE" });
 }
 
 export function getCamera(id: string): Promise<CameraDto> {
