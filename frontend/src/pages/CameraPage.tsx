@@ -42,6 +42,7 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
   const [actionError, setActionError] = useState("");
   const [scenarios, setScenarios] = useState<DemoScenarioDto[]>([]);
   const [scenarioId, setScenarioId] = useState("");
+  const [scenarioName, setScenarioName] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
   const viewerRef = useRef<HTMLDivElement>(null);
   const camerasRequestInFlight = useRef(false);
@@ -171,12 +172,15 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
     }
   };
   const uploadVideo = async (file?: File) => {
-    if (!file || saving) return;
+    const name = scenarioName.trim();
+    if (!file || !name || saving) return;
     setActionError("");
     setSaving(true);
     try {
-      await uploadDemoVideo(file);
-      setScenarioId("");
+      const result = await uploadDemoVideo(name, file);
+      setScenarios(await getDemoScenarios());
+      setScenarioId(result.scenario.id);
+      setScenarioName("");
       await load();
     } catch (reason) {
       setActionError(reason instanceof Error ? reason.message : "Không thể tải video lên.");
@@ -377,18 +381,26 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
             </div>
             <div className="demo-scenario-actions">
               <select value={scenarioId} onChange={(event) => setScenarioId(event.target.value)} disabled={saving}>
-                <option value="">Chọn một kịch bản…</option>
+                <option value="">{scenarios.length ? "Chọn một kịch bản…" : "Chưa có kịch bản"}</option>
                 {scenarios.map((scenario) => <option value={scenario.id} key={scenario.id}>{scenario.name}</option>)}
               </select>
               <button type="button" disabled={!scenarioId || saving} onClick={() => void changeScenario()}>
                 {saving ? <RefreshCw className="spin" /> : <Video />} Áp dụng
               </button>
-              <label className="demo-upload-button">
+              <input
+                className="demo-scenario-name"
+                value={scenarioName}
+                maxLength={80}
+                disabled={saving}
+                placeholder="Nhập tên kịch bản"
+                onChange={(event) => setScenarioName(event.target.value)}
+              />
+              <label className={`demo-upload-button ${!scenarioName.trim() ? "disabled" : ""}`}>
                 <Upload /> Tải video lên
                 <input
                   type="file"
                   accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
-                  disabled={saving}
+                  disabled={saving || !scenarioName.trim()}
                   onChange={(event) => {
                     void uploadVideo(event.target.files?.[0]);
                     event.target.value = "";

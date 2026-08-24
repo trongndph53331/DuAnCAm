@@ -52,8 +52,9 @@ export function selectDemoScenario(scenarioId: string): Promise<CameraDto> {
   });
 }
 
-export function uploadDemoVideo(video: File): Promise<CameraDto> {
+export function uploadDemoVideo(name: string, video: File): Promise<{ camera: CameraDto; scenario: DemoScenarioDto }> {
   const data = new FormData();
+  data.append("name", name);
   data.append("video", video);
   return apiClient("/cameras/demo-video", { method: "POST", body: data });
 }

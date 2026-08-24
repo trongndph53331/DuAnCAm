@@ -2,24 +2,18 @@ import asyncio
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from pydantic import BaseModel
 
 from src.api.auth import require_admin
 from src.database import BUILTIN_VIDEO_CAMERA_ID
 from src.services.camera_service import CameraNotFoundError, camera_service
+from src.services.demo_scenario_service import demo_scenario_service
 
 router = APIRouter(prefix="/cameras", tags=["Cameras"])
 UPLOAD_DIRECTORY = Path("uploads/videos")
 MAX_VIDEO_BYTES = 95 * 1024 * 1024
 ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".mov", ".webm"}
-DEMO_SCENARIOS = (
-    {"id": "daily-activity", "name": "Sinh hoạt thường ngày", "source": "videos/video_preview_h264.mp4"},
-    {"id": "fall-bedroom", "name": "Té ngã trong phòng", "source": "videos/06.mp4"},
-    {"id": "fall-living-room", "name": "Té ngã tại phòng khách", "source": "videos/20.mp4"},
-)
-
-
 class IdentityUpdate(BaseModel):
     enabled: bool
 
@@ -37,7 +31,7 @@ async def list_cameras(request: Request):
 
 @router.get("/demo-scenarios")
 async def list_demo_scenarios():
-    return {"items": [{"id": item["id"], "name": item["name"]} for item in DEMO_SCENARIOS]}
+    return {"items": [{"id": item["id"], "name": item["name"]} for item in demo_scenario_service.list()]}
 
 
 def _replace_demo_source(request: Request, source_path: str):
@@ -51,7 +45,7 @@ def _replace_demo_source(request: Request, source_path: str):
 async def select_demo_scenario(
     data: DemoScenarioUpdate, request: Request, _admin: dict = Depends(require_admin)
 ):
-    scenario = next((item for item in DEMO_SCENARIOS if item["id"] == data.scenario_id), None)
+    scenario = demo_scenario_service.get(data.scenario_id)
     if scenario is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy kịch bản demo")
     try:
@@ -63,7 +57,10 @@ async def select_demo_scenario(
 
 @router.post("/demo-video")
 async def upload_demo_video(
-    request: Request, video: UploadFile = File(...), _admin: dict = Depends(require_admin)
+    request: Request,
+    name: str = Form(..., min_length=1, max_length=80),
+    video: UploadFile = File(...),
+    _admin: dict = Depends(require_admin),
 ):
     suffix = Path(video.filename or "").suffix.lower()
     if suffix not in ALLOWED_VIDEO_EXTENSIONS:
@@ -82,7 +79,9 @@ async def upload_demo_video(
         if size == 0:
             raise HTTPException(status_code=422, detail="Video tải lên đang trống")
 
-        return _replace_demo_source(request, target.as_posix())
+        camera = _replace_demo_source(request, target.as_posix())
+        scenario = demo_scenario_service.add(name, target.as_posix())
+        return {"camera": camera, "scenario": {"id": scenario["id"], "name": scenario["name"]}}
     except HTTPException:
         target.unlink(missing_ok=True)
         raise
