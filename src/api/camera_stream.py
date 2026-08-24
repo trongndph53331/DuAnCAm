@@ -56,6 +56,7 @@ def stream_camera(
         headers={
             "Cache-Control": "no-store",
             "Pragma": "no-cache",
+            "Cross-Origin-Resource-Policy": "cross-origin",
         },
     )
 

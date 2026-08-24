@@ -57,7 +57,13 @@ class StreamService:
             if jpg is None:
                 continue
 
-            yield (b"--frame\r\nContent-Type: image/jpeg\r\nCache-Control: no-cache\r\n\r\n" + jpg + b"\r\n")
+            yield (
+                b"--frame\r\nContent-Type: image/jpeg\r\n"
+                + f"Content-Length: {len(jpg)}\r\n".encode("ascii")
+                + b"Cache-Control: no-cache\r\n\r\n"
+                + jpg
+                + b"\r\n"
+            )
 
     async def mjpeg_async(
         self,
@@ -101,7 +107,13 @@ class StreamService:
             if encoded is None:
                 continue
 
-            yield (b"--frame\r\nContent-Type: image/jpeg\r\nCache-Control: no-cache\r\n\r\n" + encoded + b"\r\n")
+            yield (
+                b"--frame\r\nContent-Type: image/jpeg\r\n"
+                + f"Content-Length: {len(encoded)}\r\n".encode("ascii")
+                + b"Cache-Control: no-cache\r\n\r\n"
+                + encoded
+                + b"\r\n"
+            )
 
     def _fresh_vision_result(self, packet):
         latest_result = getattr(self.vision, "latest_result", None)
