@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { resolveBackendUrl } from "../api/client";
 
 interface CameraStreamProps {
@@ -13,13 +14,30 @@ interface CameraStreamProps {
 }
 
 export function CameraStream({ cameraId, streamReady, streamUrl, className, onError, showBoxes=true, showIdentity=true, streamRevision }: CameraStreamProps) {
+  const [retryNonce, setRetryNonce] = useState(0);
+  const retryTimer = useRef<number | null>(null);
+  useEffect(() => {
+    setRetryNonce(0);
+    return () => {
+      if (retryTimer.current !== null) window.clearTimeout(retryTimer.current);
+    };
+  }, [streamUrl, streamRevision]);
+
   if (streamReady && streamUrl) {
     const resolvedStreamUrl=resolveBackendUrl(streamUrl);
     const separator=resolvedStreamUrl.includes("?")?"&":"?";
     const revision=streamRevision ? `&revision=${streamRevision}` : "";
-    const configured=`${resolvedStreamUrl}${separator}boxes=${showBoxes}&identity=${showIdentity}${revision}`;
+    const configured=`${resolvedStreamUrl}${separator}boxes=${showBoxes}&identity=${showIdentity}${revision}&retry=${retryNonce}`;
     const streamClassName=["camera-stream-image",className].filter(Boolean).join(" ");
-    return <img className={streamClassName} src={configured} alt={`Luồng trực tiếp ${cameraId}`} onError={onError} />;
+    const retry = () => {
+      onError?.();
+      if (retryTimer.current !== null) return;
+      retryTimer.current = window.setTimeout(() => {
+        retryTimer.current = null;
+        setRetryNonce((value) => value + 1);
+      }, 1500);
+    };
+    return <img className={streamClassName} src={configured} alt={`Luồng trực tiếp ${cameraId}`} onError={retry} />;
   }
   return null;
 }
