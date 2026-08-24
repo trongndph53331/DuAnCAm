@@ -6,7 +6,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
 from pydantic import BaseModel
 
-from src.api.auth import require_admin
+from src.api.auth import require_permission
 from src.database import BUILTIN_VIDEO_CAMERA_ID
 from src.services.camera_service import CameraNotFoundError, camera_service
 from src.services.demo_scenario_service import demo_scenario_service
@@ -64,7 +64,7 @@ def _replace_demo_source(request: Request, source_path: str):
 
 @router.post("/demo-scenario")
 async def select_demo_scenario(
-    data: DemoScenarioUpdate, request: Request, _admin: dict = Depends(require_admin)
+    data: DemoScenarioUpdate, request: Request, _user: dict = Depends(require_permission("manage_cameras"))
 ):
     scenario = demo_scenario_service.get(data.scenario_id)
     if scenario is None:
@@ -78,7 +78,7 @@ async def select_demo_scenario(
 
 @router.delete("/demo-scenarios/{scenario_id}", status_code=204)
 async def delete_demo_scenario(
-    scenario_id: str, request: Request, _admin: dict = Depends(require_admin)
+    scenario_id: str, request: Request, _user: dict = Depends(require_permission("manage_cameras"))
 ):
     scenario = demo_scenario_service.get(scenario_id)
     if scenario is None:
@@ -99,7 +99,7 @@ async def delete_demo_scenario(
 async def upload_demo_video(
     request: Request,
     video: UploadFile = File(...),
-    _admin: dict = Depends(require_admin),
+    _user: dict = Depends(require_permission("manage_cameras")),
 ):
     suffix = Path(video.filename or "").suffix.lower()
     if suffix not in ALLOWED_VIDEO_EXTENSIONS:
@@ -135,7 +135,7 @@ async def complete_demo_video(
     upload_id: str,
     data: DemoScenarioName,
     request: Request,
-    _admin: dict = Depends(require_admin),
+    _user: dict = Depends(require_permission("manage_cameras")),
 ):
     name = data.name.strip()
     if not name or len(name) > 80:
@@ -153,7 +153,9 @@ async def complete_demo_video(
 
 
 @router.delete("/demo-video/{upload_id}", status_code=204)
-async def discard_demo_video(upload_id: str, _admin: dict = Depends(require_admin)):
+async def discard_demo_video(
+    upload_id: str, _user: dict = Depends(require_permission("manage_cameras"))
+):
     _pending_video(upload_id).unlink(missing_ok=True)
 
 
@@ -168,7 +170,8 @@ async def get_camera(camera_id: str, request: Request):
 
 @router.post("/{camera_id}/start", status_code=202)
 async def start_camera(
-    camera_id: str, request: Request, loop_video: bool = True, _admin: dict = Depends(require_admin)
+    camera_id: str, request: Request, loop_video: bool = True,
+    _user: dict = Depends(require_permission("manage_cameras")),
 ):
     try:
         camera_service.set_camera_enabled(camera_id, True)
@@ -182,7 +185,9 @@ async def start_camera(
 
 
 @router.post("/{camera_id}/stop")
-async def stop_camera(camera_id: str, request: Request, _admin: dict = Depends(require_admin)):
+async def stop_camera(
+    camera_id: str, request: Request, _user: dict = Depends(require_permission("manage_cameras"))
+):
     try:
         return request.app.state.local_runtime.set_camera_enabled(camera_id, False)
     except CameraNotFoundError as exc:
@@ -190,7 +195,9 @@ async def stop_camera(camera_id: str, request: Request, _admin: dict = Depends(r
 
 
 @router.post("/{camera_id}/vision/enable")
-async def enable_camera_vision(camera_id: str, request: Request, _admin: dict = Depends(require_admin)):
+async def enable_camera_vision(
+    camera_id: str, request: Request, _user: dict = Depends(require_permission("manage_cameras"))
+):
     try:
         public_id = camera_service.public_id(camera_id)
     except CameraNotFoundError as exc:
@@ -199,7 +206,9 @@ async def enable_camera_vision(camera_id: str, request: Request, _admin: dict = 
 
 
 @router.post("/{camera_id}/vision/disable")
-async def disable_camera_vision(camera_id: str, request: Request, _admin: dict = Depends(require_admin)):
+async def disable_camera_vision(
+    camera_id: str, request: Request, _user: dict = Depends(require_permission("manage_cameras"))
+):
     try:
         public_id = camera_service.public_id(camera_id)
     except CameraNotFoundError as exc:
@@ -218,7 +227,8 @@ async def get_camera_vision_status(camera_id: str, request: Request):
 
 @router.patch("/{camera_id}/vision/identity")
 async def set_camera_identity(
-    camera_id: str, data: IdentityUpdate, request: Request, _admin: dict = Depends(require_admin)
+    camera_id: str, data: IdentityUpdate, request: Request,
+    _user: dict = Depends(require_permission("manage_cameras")),
 ):
     try:
         public_id = camera_service.public_id(camera_id)

@@ -29,9 +29,9 @@ async def test_settings_persist_users_permissions_and_camera_state(client):
     assert created.json()["permissions"]["view_history"] is True
 
     permission = await client.patch(
-        f"/api/v1/settings/users/{user_id}/permissions/manage_persons", json={"granted": True}
+        f"/api/v1/settings/users/{user_id}/permissions/manage_family", json={"granted": True}
     )
-    assert permission.json()["permissions"]["manage_persons"] is True
+    assert permission.json()["permissions"]["manage_family"] is True
 
     camera_id = settings.json()["cameras"][0]["id"]
     camera = await client.patch(f"/api/v1/settings/cameras/{camera_id}", json={"active": False})

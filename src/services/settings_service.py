@@ -3,15 +3,7 @@ from typing import Any
 from uuid import uuid4
 
 from src.database import database_connection
-
-PERMISSIONS = (
-    "view_history",
-    "acknowledge_alert",
-    "resolve_alert",
-    "manage_cameras",
-    "manage_persons",
-    "manage_users",
-)
+from src.permissions import PERMISSIONS
 
 
 class SettingsNotFoundError(Exception):

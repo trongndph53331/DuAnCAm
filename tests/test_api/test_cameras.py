@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from src.api.auth import require_admin
+from src.api.auth import current_user, require_admin
 from src.database import BUILTIN_VIDEO_CAMERA_ID, database_connection
 from src.main import app
 from src.services.demo_scenario_service import demo_scenario_service
@@ -54,13 +54,17 @@ async def test_camera_api_exposes_exactly_one_demo_camera(client):
 
 
 @pytest.mark.asyncio
-async def test_demo_source_changes_require_admin(client, admin_api, demo_scenario_metadata):
+async def test_demo_source_changes_require_camera_permission(client, admin_api, demo_scenario_metadata):
     completed = await _upload_and_complete(client, "Kịch bản tự tải")
     scenario_id = completed.json()["scenario"]["id"]
-    app.dependency_overrides.pop(require_admin, None)
+    default_user = app.dependency_overrides[current_user]
+    app.dependency_overrides[current_user] = lambda: {
+        "id": "caregiver", "role": "caregiver", "force_password_change": False,
+        "permissions": {"manage_cameras": False},
+    }
     denied = await client.post("/api/v1/cameras/demo-scenario", json={"scenario_id": scenario_id})
-    assert denied.status_code == 401
-    app.dependency_overrides[require_admin] = _admin
+    assert denied.status_code == 403
+    app.dependency_overrides[current_user] = default_user
     selected = await client.post("/api/v1/cameras/demo-scenario", json={"scenario_id": scenario_id})
     assert selected.status_code == 200
     assert selected.json()["id"] == BUILTIN_VIDEO_CAMERA_ID

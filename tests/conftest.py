@@ -4,6 +4,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
+from src.api.auth import current_user
 from src.config import get_settings
 from src.database import database_connection, initialize_database
 from src.main import app
@@ -37,10 +38,20 @@ async def client(preserve_application_database, monkeypatch):
             event_dispatcher=event_dispatcher,
         ),
     )
+    app.dependency_overrides[current_user] = lambda: {
+        "id": "test-admin", "role": "admin", "force_password_change": False,
+        "permissions": {
+            "view_history": True, "acknowledge_alerts": True, "resolve_alerts": True,
+            "manage_cameras": True, "manage_family": True, "manage_users": True,
+        },
+    }
     transport = ASGITransport(app=app)
-    async with app.router.lifespan_context(app):
-        async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            yield ac
+    try:
+        async with app.router.lifespan_context(app):
+            async with AsyncClient(transport=transport, base_url="http://test") as ac:
+                yield ac
+    finally:
+        app.dependency_overrides.pop(current_user, None)
 
 
 @pytest.fixture

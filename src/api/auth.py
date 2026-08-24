@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 
+from src.permissions import PERMISSION_DENIED_DETAIL, PERMISSIONS
 from src.services.auth_service import AuthenticationError, InactiveAccountError, auth_service
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -25,6 +26,21 @@ def require_admin(user: dict = Depends(current_user)) -> dict:
     if user["role"] != "admin":
         raise HTTPException(403, "Chỉ quản trị viên được thực hiện thao tác này")
     return user
+
+
+def ensure_permission(user: dict, permission: str) -> dict:
+    if permission not in PERMISSIONS:
+        raise RuntimeError(f"Unknown permission: {permission}")
+    if user["role"] != "admin" and not user["permissions"].get(permission, False):
+        raise HTTPException(403, PERMISSION_DENIED_DETAIL)
+    return user
+
+
+def require_permission(permission: str):
+    def dependency(user: dict = Depends(current_user)) -> dict:
+        return ensure_permission(user, permission)
+
+    return dependency
 
 
 class LoginRequest(BaseModel):

@@ -27,7 +27,11 @@ button:focus-visible { outline: 3px solid rgba(59,130,246,.35); outline-offset: 
 button, a { -webkit-tap-highlight-color: transparent; }
 svg { width: 20px; height: 20px; stroke-width: 2; }
 
+.realtime-alert-toast,.alert-sound-permission{position:fixed;z-index:3400;right:22px;width:min(390px,calc(100vw - 28px));padding:14px 16px;border:1px solid var(--border-default,#dde7f2);border-radius:15px;background:var(--bg-surface,#fff);color:var(--text-primary,#172033);display:flex;align-items:center;gap:12px;box-shadow:0 18px 48px rgba(15,23,42,.2);animation:alertNoticeIn .2s ease-out}.realtime-alert-toast{top:84px;border-color:#f6c453}.realtime-alert-toast>svg{flex:0 0 auto;color:#d97706}.realtime-alert-toast span,.alert-sound-permission span{min-width:0;flex:1}.realtime-alert-toast strong,.realtime-alert-toast small,.alert-sound-permission strong,.alert-sound-permission small{display:block}.realtime-alert-toast small,.alert-sound-permission small{margin-top:3px;color:var(--text-secondary,#64748b);font-size:12px;line-height:1.4}.alert-sound-permission{top:166px}.alert-sound-permission.standalone{top:84px}.alert-sound-permission>svg{flex:0 0 auto;color:#d97706}.alert-sound-permission button{flex:0 0 auto;padding:8px 10px;border:0;border-radius:9px;background:var(--primary,#2563eb);color:#fff;font-weight:700;cursor:pointer}@keyframes alertNoticeIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:600px){.realtime-alert-toast,.alert-sound-permission{left:14px;right:14px;width:auto}.realtime-alert-toast{top:74px}.alert-sound-permission{top:154px;align-items:flex-start}.alert-sound-permission.standalone{top:74px}.alert-sound-permission button{align-self:center}}
+
 .app-shell { min-height: 100vh; display: block; }
+.forbidden-page{min-height:calc(100vh - 120px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--text-primary)}.forbidden-page>svg{width:52px;height:52px;color:#d97706}.forbidden-page h1{margin:16px 0 0;font-size:48px}.forbidden-page h2{margin:4px 0 8px}.forbidden-page p{margin:0;color:var(--text-secondary)}
 .sidebar { position: fixed; left: 0; top: 0; width: 252px; height: 100vh; height: 100dvh; padding: 28px 18px 22px; background: #fff; border-right: 1px solid var(--color-border); display: flex; flex-direction: column; z-index: 30; }
 .brand { display: flex; align-items: center; gap: 12px; padding: 0 10px 30px; }
 .brand-link { width: 100%; border: 0; background: transparent; text-align: left; cursor: pointer; }
@@ -583,6 +587,7 @@ html, body, #root { height: 100%; min-height: 0; overflow: hidden; }
 :root[data-theme="dark"] .mobile-bottom-nav :is(a, button).active { color: var(--primary); background: var(--primary-subtle); }
 :root[data-theme="dark"] .logout-button { color: var(--text-secondary); }
 :root[data-theme="dark"] .logout-button:hover { color: var(--text-primary); background: var(--interactive-hover); }
+:root[data-theme="dark"] .realtime-alert-toast,:root[data-theme="dark"] .alert-sound-permission{background:var(--bg-elevated);border-color:var(--border-strong);box-shadow:0 18px 48px rgba(0,0,0,.42)}
 
 /* Header account menu and logout confirmation. */
 .account-control { position: relative; flex: 0 0 auto; }

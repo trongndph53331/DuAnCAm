@@ -56,16 +56,18 @@ def _insert_alert(occurred_at: datetime, *, alert_type="fall", action=None, note
 
 @pytest.mark.asyncio
 async def test_statistics_requires_admin(client):
+    default = app.dependency_overrides.pop(current_user)
     assert (await client.get("/api/v1/statistics")).status_code == 401
     app.dependency_overrides[current_user] = _caregiver
     try:
         assert (await client.get("/api/v1/statistics")).status_code == 403
     finally:
-        app.dependency_overrides.pop(current_user, None)
+        app.dependency_overrides[current_user] = default
 
 
 @pytest.mark.asyncio
 async def test_statistics_allows_authenticated_admin_and_denies_caregiver(client):
+    default = app.dependency_overrides.pop(current_user)
     password = "Statistics@2026"
     caregiver_id = str(uuid4())
     with database_connection() as connection:
@@ -91,8 +93,11 @@ async def test_statistics_allows_authenticated_admin_and_denies_caregiver(client
     assert caregiver_login.status_code == 200
     admin_headers = {"Authorization": f"Bearer {admin_login.json()['token']}"}
     caregiver_headers = {"Authorization": f"Bearer {caregiver_login.json()['token']}"}
-    assert (await client.get("/api/v1/statistics", headers=admin_headers)).status_code == 200
-    assert (await client.get("/api/v1/statistics", headers=caregiver_headers)).status_code == 403
+    try:
+        assert (await client.get("/api/v1/statistics", headers=admin_headers)).status_code == 200
+        assert (await client.get("/api/v1/statistics", headers=caregiver_headers)).status_code == 403
+    finally:
+        app.dependency_overrides[current_user] = default
 
 
 @pytest.mark.asyncio

@@ -15,7 +15,7 @@ WHERE id = '00000000-0000-4000-8000-000000000004';
 UPDATE user_permissions
 SET is_granted = 1, updated_at = '2026-08-03T01:05:00.000Z'
 WHERE user_id = '00000000-0000-4000-8000-000000000003'
-  AND permission_key IN ('resolve_alert', 'manage_persons');
+  AND permission_key IN ('resolve_alerts', 'manage_family');
 
 INSERT INTO persons (id, display_name, relationship_label, is_active, created_at, updated_at) VALUES
 ('10000000-0000-4000-8000-000000000001', 'Nguyễn Văn An', 'Ông', 1, '2026-08-03T00:00:00.000Z', '2026-08-03T00:00:00.000Z');

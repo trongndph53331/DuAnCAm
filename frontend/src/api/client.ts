@@ -42,6 +42,9 @@ async function apiResponse(path: string, init?: RequestInit): Promise<Response> 
     ...init,
     headers,
   });
+  if (response.status === 403 && path !== "/auth/me") {
+    window.dispatchEvent(new CustomEvent("antam:auth-refresh"));
+  }
 
   if (!response.ok) {
     const payload = await response.json().catch(() => null) as { detail?: string } | null;

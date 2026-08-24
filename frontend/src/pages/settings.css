@@ -1603,3 +1603,7 @@
 .permission-view .caregiver-list small {
   color: var(--text-muted);
 }
+.alert-sound-setting>.data-icon{background:#fff7e6;color:#c66a08}.alert-sound-setting>div{min-width:0;flex:1}.alert-sound-setting small{max-width:650px;line-height:1.5}
+.permission-update-toast{margin:0 0 14px;padding:11px 14px;border:1px solid;border-radius:11px;font-size:13px;font-weight:700}.permission-update-toast.success{border-color:#86efac;background:#f0fdf4;color:#15803d}.permission-update-toast.error{border-color:#fca5a5;background:#fff1f2;color:#b91c1c}
+:root[data-theme="dark"] .alert-sound-setting>.data-icon{background:rgba(217,119,6,.14);color:#fbbf24}
+:root[data-theme="dark"] .permission-update-toast.success{background:rgba(21,128,61,.13);color:#86efac}:root[data-theme="dark"] .permission-update-toast.error{background:rgba(185,28,28,.13);color:#fca5a5}

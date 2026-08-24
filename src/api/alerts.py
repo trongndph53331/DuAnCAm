@@ -1,8 +1,9 @@
 import json
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
+from src.api.auth import current_user, ensure_permission, require_permission
 from src.models.schemas import AlertResponse, AlertReviewRequest
 from src.services.alert_broadcaster import alert_broadcaster
 from src.services.event_service import EventNotFoundError, event_service
@@ -11,7 +12,7 @@ router = APIRouter(prefix="/alerts", tags=["Alerts"])
 
 
 @router.get("", response_model=list[AlertResponse])
-async def get_alerts():
+async def get_alerts(_user: dict = Depends(current_user)):
     """Danh sách cảnh báo cho dashboard, mới nhất trước."""
     return await event_service.list_alerts()
 
@@ -34,7 +35,7 @@ async def stream_alerts():
 
 
 @router.get("/{alert_id}", response_model=AlertResponse)
-async def get_alert(alert_id: str):
+async def get_alert(alert_id: str, _user: dict = Depends(current_user)):
     try:
         return await event_service.get_alert(alert_id)
     except EventNotFoundError as exc:
@@ -42,8 +43,10 @@ async def get_alert(alert_id: str):
 
 
 @router.patch("/{alert_id}", response_model=AlertResponse)
-async def review_alert(alert_id: str, review: AlertReviewRequest):
+async def review_alert(alert_id: str, review: AlertReviewRequest, user: dict = Depends(current_user)):
     """Cập nhật trạng thái Human-in-the-loop từ dashboard."""
+    permission = "resolve_alerts" if review.status in {"safe", "resolved", "false_alarm"} else "acknowledge_alerts"
+    ensure_permission(user, permission)
     try:
         return await event_service.review(alert_id, review)
     except EventNotFoundError as exc:
@@ -51,7 +54,7 @@ async def review_alert(alert_id: str, review: AlertReviewRequest):
 
 
 @router.post("/{alert_id}/read", response_model=AlertResponse)
-async def mark_alert_read(alert_id: str):
+async def mark_alert_read(alert_id: str, _user: dict = Depends(current_user)):
     try:
         return await event_service.mark_read(alert_id)
     except EventNotFoundError as exc:
@@ -59,7 +62,9 @@ async def mark_alert_read(alert_id: str):
 
 
 @router.post("/confirm")
-async def confirm_alert(alert_id: str, feedback: str):
+async def confirm_alert(
+    alert_id: str, feedback: str, _user: dict = Depends(require_permission("acknowledge_alerts"))
+):
     """Endpoint cũ, được giữ để tương thích với client hiện tại."""
     try:
         await event_service.confirm_legacy(alert_id, feedback)

@@ -21,10 +21,10 @@ CREATE TABLE user_permissions (
     user_id TEXT NOT NULL REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
     permission_key TEXT NOT NULL CHECK (permission_key IN (
         'view_history',
-        'acknowledge_alert',
-        'resolve_alert',
+        'acknowledge_alerts',
+        'resolve_alerts',
         'manage_cameras',
-        'manage_persons',
+        'manage_family',
         'manage_users'
     )),
     is_granted INTEGER NOT NULL DEFAULT 0 CHECK (is_granted IN (0, 1)),
@@ -49,10 +49,10 @@ BEGIN
     INSERT INTO user_permissions (id, user_id, permission_key, is_granted)
     VALUES
         (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(6))), NEW.id, 'view_history', 1),
-        (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(6))), NEW.id, 'acknowledge_alert', 1),
-        (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(6))), NEW.id, 'resolve_alert', 0),
+        (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(6))), NEW.id, 'acknowledge_alerts', 1),
+        (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(6))), NEW.id, 'resolve_alerts', 0),
         (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(6))), NEW.id, 'manage_cameras', 0),
-        (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(6))), NEW.id, 'manage_persons', 0),
+        (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(6))), NEW.id, 'manage_family', 0),
         (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(6))), NEW.id, 'manage_users', 0);
 END;
 

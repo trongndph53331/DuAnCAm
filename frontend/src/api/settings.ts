@@ -1,6 +1,6 @@
 import { apiClient } from "./client";
 
-export type PermissionKey = "view_history" | "acknowledge_alert" | "resolve_alert" | "manage_cameras" | "manage_persons" | "manage_users";
+export type PermissionKey = "view_history" | "acknowledge_alerts" | "resolve_alerts" | "manage_cameras" | "manage_family" | "manage_users";
 export interface SettingsUser { id:string; name:string; email:string; role:"admin"|"caregiver"; active:boolean; created_at:string; permissions:Record<PermissionKey,boolean>; }
 export interface SettingsCamera { id:string; name:string; location_label:string; operational_status:"connecting"|"online"|"offline"|"ended"|"error"; vision_status:string; last_seen_at?:string|null; is_active:boolean; vision_enabled:boolean; source_kind:string; }
 export interface GeneralSettingsData { retention_days:7|30|90; stranger_threshold:number; fall_threshold:number; sensitive_enabled:boolean; sensitive_from:string; sensitive_to:string; }

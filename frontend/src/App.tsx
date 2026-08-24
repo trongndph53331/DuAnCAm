@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   BarChart3,
+  AlertTriangle,
   Bell,
   Camera,
   ChevronDown,
@@ -29,6 +30,15 @@ import { API_BASE_URL } from "./api/client";
 import { logout, me, type AuthUser } from "./api/auth";
 import LoginPage from "./pages/LoginPage";
 import { IconButton, Tooltip, useTheme } from "./design-system";
+import { AuthProvider, useAuth } from "./auth/AuthContext";
+import { canAccessRoute } from "./auth/accessControl";
+import {
+  ALERT_SOUND_PREFERENCE_EVENT,
+  AlertNotificationController,
+  WebAudioAlertPlayer,
+  readAlertSoundEnabled,
+  type RealtimeAlertMessage,
+} from "./features/alerts/alertNotifications";
 
 const navItems = [
   { label: "Tổng quan", path: "/", icon: Home, badge: undefined },
@@ -51,12 +61,11 @@ const currentPath = (): RoutePath => {
 };
 
 function DashboardApp({
-  user,
   onLogout,
 }: {
-  user: AuthUser;
   onLogout: () => Promise<void>;
 }) {
+  const { user } = useAuth();
   const { theme, cycleTheme } = useTheme();
   const [activePath, setActivePath] = useState<RoutePath>(currentPath);
   const [routeRevision, setRouteRevision] = useState(0);
@@ -68,6 +77,28 @@ function DashboardApp({
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [logoutPending, setLogoutPending] = useState(false);
   const [logoutError, setLogoutError] = useState("");
+  const [alertToast, setAlertToast] = useState(false);
+  const initialAlertSoundEnabled = useRef(
+    readAlertSoundEnabled(user.id, user.role === "admin"),
+  ).current;
+  const [soundPermissionHint, setSoundPermissionHint] = useState(initialAlertSoundEnabled);
+  const alertToastTimerRef = useRef<number | undefined>(undefined);
+  const loggingOutRef = useRef(false);
+  const alertPlayerRef = useRef<WebAudioAlertPlayer | null>(null);
+  const alertControllerRef = useRef<AlertNotificationController | null>(null);
+  if (!alertPlayerRef.current) alertPlayerRef.current = new WebAudioAlertPlayer();
+  if (!alertControllerRef.current) {
+    alertControllerRef.current = new AlertNotificationController(
+      alertPlayerRef.current,
+      initialAlertSoundEnabled,
+      (soundBlocked) => {
+        setAlertToast(true);
+        setSoundPermissionHint(soundBlocked);
+        if (alertToastTimerRef.current) window.clearTimeout(alertToastTimerRef.current);
+        alertToastTimerRef.current = window.setTimeout(() => setAlertToast(false), 4_000);
+      },
+    );
+  }
   const accountRef = useRef<HTMLDivElement>(null);
   const cancelLogoutRef = useRef<HTMLButtonElement>(null);
   const [isMobileLayout, setIsMobileLayout] = useState(
@@ -117,16 +148,55 @@ function DashboardApp({
     if (logoutConfirmOpen) cancelLogoutRef.current?.focus();
   }, [logoutConfirmOpen]);
   useEffect(() => {
+    const player = alertPlayerRef.current!;
+    const unlock = () => {
+      void player.unlock().then((allowed) => {
+        if (allowed) setSoundPermissionHint(false);
+      });
+    };
+    document.addEventListener("pointerdown", unlock, { passive: true });
+    document.addEventListener("keydown", unlock);
+    document.addEventListener("touchend", unlock, { passive: true });
+    return () => {
+      document.removeEventListener("pointerdown", unlock);
+      document.removeEventListener("keydown", unlock);
+      document.removeEventListener("touchend", unlock);
+    };
+  }, []);
+  useEffect(() => {
+    const syncPreference = (event: Event) => {
+      const detail = (event as CustomEvent<{ userId: string; enabled: boolean }>).detail;
+      if (detail?.userId !== user.id) return;
+      alertControllerRef.current?.setEnabled(detail.enabled);
+      setSoundPermissionHint(detail.enabled && !alertPlayerRef.current!.unlocked);
+    };
+    window.addEventListener(ALERT_SOUND_PREFERENCE_EVENT, syncPreference);
+    return () => window.removeEventListener(ALERT_SOUND_PREFERENCE_EVENT, syncPreference);
+  }, [user.id]);
+  useEffect(() => {
     const stream = new EventSource(`${API_BASE_URL}/alerts/stream`);
     const sync = () =>
       window.dispatchEvent(new CustomEvent("antam:alerts-changed"));
+    const receiveAlert = (event: Event) => {
+      sync();
+      try {
+        const message = JSON.parse((event as MessageEvent<string>).data) as RealtimeAlertMessage;
+        alertControllerRef.current?.handle(message, !loggingOutRef.current);
+      } catch {
+        // A malformed realtime message can still trigger the normal list refresh.
+      }
+    };
     stream.addEventListener("ready", sync);
-    stream.addEventListener("alert", sync);
+    stream.addEventListener("alert", receiveAlert);
     return () => {
       stream.removeEventListener("ready", sync);
-      stream.removeEventListener("alert", sync);
+      stream.removeEventListener("alert", receiveAlert);
       stream.close();
     };
+  }, []);
+  useEffect(() => () => {
+    if (alertToastTimerRef.current) window.clearTimeout(alertToastTimerRef.current);
+    alertPlayerRef.current?.close();
   }, []);
   useEffect(() => {
     const refreshUnread = () => {
@@ -193,26 +263,20 @@ function DashboardApp({
     setLogoutConfirmOpen(true);
   };
   const confirmLogout = async () => {
+    loggingOutRef.current = true;
     setLogoutPending(true);
     setLogoutError("");
     try {
       await onLogout();
     } catch {
+      loggingOutRef.current = false;
       setLogoutError("Không thể đăng xuất lúc này. Vui lòng thử lại.");
       setLogoutPending(false);
     }
   };
   const activeNav =
     navItems.find((item) => item.path === activePath)?.label ?? "Tổng quan";
-  const visibleNav = navItems.filter(
-    (item) => item.path !== "/statistics" || user.role === "admin",
-  );
-  useEffect(() => {
-    if (activePath === "/statistics" && user.role !== "admin") {
-      window.history.replaceState({}, "", "/");
-      setActivePath("/");
-    }
-  }, [activePath, user.role]);
+  const visibleNav = navItems.filter((item) => canAccessRoute(user, item.path));
 
   return (
     <div
@@ -373,7 +437,7 @@ function DashboardApp({
           className={`route-content ${activeNav === "Tổng quan" ? "overview-route" : ""} ${activePath === "/history" ? "history-route" : ""} ${activePath === "/family" ? "family-route" : ""}`}
           key={`${activePath}-${routeRevision}`}
         >
-          <RouteContent path={activePath} user={user} />
+          <RouteContent path={activePath} />
         </div>
       </main>
       {isMobileLayout && (
@@ -381,7 +445,7 @@ function DashboardApp({
           className="mobile-bottom-nav"
           aria-label="Điều hướng nhanh trên điện thoại"
         >
-          {navItems.slice(0, 4).map(({ label, path, icon: Icon }) => {
+          {visibleNav.filter((item) => navItems.slice(0, 4).some(({ path }) => path === item.path)).map(({ label, path, icon: Icon }) => {
             const badge = path === "/alerts" ? unreadAlerts : 0;
             return (
               <a
@@ -423,6 +487,19 @@ function DashboardApp({
             <span>Thêm</span>
           </button>
         </nav>
+      )}
+      {alertToast && (
+        <div className="realtime-alert-toast" role="status" aria-live="assertive">
+          <Bell />
+          <span><strong>Có cảnh báo mới</strong><small>Mở mục Cảnh báo để xem chi tiết.</small></span>
+        </div>
+      )}
+      {soundPermissionHint && (
+        <div className={`alert-sound-permission ${alertToast ? "" : "standalone"}`} role="status">
+          <AlertTriangle />
+          <span><strong>Chưa thể phát âm thanh</strong><small>Chạm vào trang hoặc nút bên cạnh để cho phép âm thanh cảnh báo.</small></span>
+          <button type="button" onClick={() => void alertPlayerRef.current?.unlock().then((allowed) => setSoundPermissionHint(!allowed))}>Bật âm thanh</button>
+        </div>
       )}
       {logoutConfirmOpen && (
         <div
@@ -478,14 +555,20 @@ function DashboardApp({
   );
 }
 
-function RouteContent({ path, user }: { path: RoutePath; user: AuthUser }) {
-  if (path === "/camera") return <CameraPage isAdmin={user.role === "admin"} />;
-  if (path === "/alerts") return <AlertsPage />;
+function ForbiddenPage() {
+  return <section className="forbidden-page" role="alert"><ShieldCheck /><h1>403</h1><h2>Bạn không có quyền truy cập</h2><p>Hãy liên hệ quản trị viên nếu bạn cần sử dụng chức năng này.</p></section>;
+}
+
+function RouteContent({ path }: { path: RoutePath }) {
+  const { user, hasPermission } = useAuth();
+  if (!canAccessRoute(user, path)) return <ForbiddenPage />;
+  if (path === "/camera") return <CameraPage canManageCamera={hasPermission("manage_cameras")} />;
+  if (path === "/alerts") return <AlertsPage canAcknowledge={hasPermission("acknowledge_alerts")} canResolve={hasPermission("resolve_alerts")} />;
   if (path === "/family") return <FamilyPage />;
   if (path === "/history") return <HistoryPage />;
   if (path === "/statistics") return <StatisticsPage />;
   if (path === "/settings")
-    return <SettingsPage isAdmin={user.role === "admin"} />;
+    return <SettingsPage isAdmin={user.role === "admin"} userId={user.id} canManageCameras={hasPermission("manage_cameras")} canManageUsers={user.role === "admin"} />;
   return <OverviewPage />;
 }
 
@@ -507,13 +590,14 @@ function App() {
   if (!user || user.force_password_change)
     return <LoginPage user={user} onAuthenticated={setUser} />;
   return (
-    <DashboardApp
-      user={user}
-      onLogout={async () => {
-        await logout();
-        setUser(null);
-      }}
-    />
+    <AuthProvider initialUser={user}>
+      <DashboardApp
+        onLogout={async () => {
+          await logout();
+          setUser(null);
+        }}
+      />
+    </AuthProvider>
   );
 }
 

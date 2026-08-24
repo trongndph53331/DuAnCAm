@@ -83,6 +83,49 @@ def ensure_builtin_cameras(connection: sqlite3.Connection) -> None:
 
 def _apply_runtime_migrations(connection: sqlite3.Connection) -> None:
     """Small idempotent migrations for databases created before runtime integration."""
+    permission_table = connection.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'user_permissions'"
+    ).fetchone()
+    if permission_table and "acknowledge_alerts" not in permission_table[0]:
+        connection.executescript(
+            """
+            DROP TRIGGER IF EXISTS trg_default_permissions_on_caregiver_insert;
+            ALTER TABLE user_permissions RENAME TO user_permissions_legacy;
+            CREATE TABLE user_permissions (
+                id TEXT PRIMARY KEY NOT NULL CHECK (length(id) = 36),
+                user_id TEXT NOT NULL REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+                permission_key TEXT NOT NULL CHECK (permission_key IN (
+                    'view_history','acknowledge_alerts','resolve_alerts',
+                    'manage_cameras','manage_family','manage_users'
+                )),
+                is_granted INTEGER NOT NULL DEFAULT 0 CHECK (is_granted IN (0, 1)),
+                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                UNIQUE (user_id, permission_key)
+            );
+            INSERT INTO user_permissions (id,user_id,permission_key,is_granted,updated_at)
+            SELECT id,user_id,
+                CASE permission_key
+                    WHEN 'acknowledge_alert' THEN 'acknowledge_alerts'
+                    WHEN 'resolve_alert' THEN 'resolve_alerts'
+                    WHEN 'manage_persons' THEN 'manage_family'
+                    ELSE permission_key
+                END,
+                is_granted,updated_at
+            FROM user_permissions_legacy;
+            DROP TABLE user_permissions_legacy;
+            CREATE INDEX idx_user_permissions_user ON user_permissions(user_id);
+            CREATE TRIGGER trg_default_permissions_on_caregiver_insert
+            AFTER INSERT ON users WHEN NEW.role = 'caregiver' BEGIN
+                INSERT INTO user_permissions (id,user_id,permission_key,is_granted) VALUES
+                (lower(hex(randomblob(4)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(6))),NEW.id,'view_history',1),
+                (lower(hex(randomblob(4)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(6))),NEW.id,'acknowledge_alerts',1),
+                (lower(hex(randomblob(4)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(6))),NEW.id,'resolve_alerts',0),
+                (lower(hex(randomblob(4)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(6))),NEW.id,'manage_cameras',0),
+                (lower(hex(randomblob(4)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(6))),NEW.id,'manage_family',0),
+                (lower(hex(randomblob(4)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(6))),NEW.id,'manage_users',0);
+            END;
+            """
+        )
     connection.executescript(
         """
         CREATE TABLE IF NOT EXISTS camera_sources (

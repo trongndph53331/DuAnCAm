@@ -35,7 +35,7 @@ import "./cameraViewer.css";
 import "./cameraApi.css";
 import "./cameraTheme.css";
 
-export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
+export default function CameraPage({ canManageCamera }: { canManageCamera: boolean }) {
   const [feeds, setFeeds] = useState<CameraDto[]>([]);
   const [selectedId, setSelectedId] = useState(
     () => new URLSearchParams(window.location.search).get("camera") ?? "",
@@ -398,7 +398,7 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
                   />{" "}
                   Hiện khung
                 </label>
-                {isAdmin && <label title="Bật phát hiện người lạ">
+                {canManageCamera && <label title="Bật phát hiện người lạ">
                   <input
                     type="checkbox"
                     checked={recognitionEnabled}
@@ -452,7 +452,7 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
             <span>Hiện khung</span>
             {showBoxes ? <Check /> : <i aria-hidden="true" />}
           </button>
-          {isAdmin && <button
+          {canManageCamera && <button
             type="button"
             className={recognitionEnabled ? "active" : ""}
             aria-pressed={recognitionEnabled}
@@ -472,7 +472,7 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
             )}
           </button>}
         </div>
-        {isAdmin && (
+        {canManageCamera && (
           <section className="demo-scenario-panel" aria-labelledby="demo-scenario-title">
             <div>
               <h2 id="demo-scenario-title">Chọn kịch bản demo</h2>

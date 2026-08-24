@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Sun,
+  Volume2,
   UserPlus,
   UsersRound,
   X,
@@ -35,6 +36,8 @@ import {
 } from "../api/settings";
 import "./settings.css";
 import { useTheme, type ThemePreference } from "../design-system";
+import { readAlertSoundEnabled, saveAlertSoundEnabled } from "../features/alerts/alertNotifications";
+import { requestPermissionChange } from "../auth/permissionState";
 
 const tabs = [
   { id: "general", label: "Cài đặt chung", icon: Settings },
@@ -46,10 +49,10 @@ const tabs = [
 type Tab = (typeof tabs)[number]["id"];
 const permissionLabels: Record<PermissionKey, string> = {
   view_history: "Xem lịch sử",
-  acknowledge_alert: "Xác nhận cảnh báo",
-  resolve_alert: "Xử lý / đóng cảnh báo",
+  acknowledge_alerts: "Xác nhận cảnh báo",
+  resolve_alerts: "Xử lý / đóng cảnh báo",
   manage_cameras: "Quản lý camera",
-  manage_persons: "Quản lý người thân",
+  manage_family: "Quản lý người thân",
   manage_users: "Quản lý người dùng",
 };
 
@@ -78,12 +81,17 @@ function Toggle({
   );
 }
 
-export default function SettingsPage({ isAdmin }: { isAdmin: boolean }) {
+export default function SettingsPage({ isAdmin, userId, canManageCameras, canManageUsers }: { isAdmin: boolean; userId: string; canManageCameras: boolean; canManageUsers: boolean }) {
   const { theme, setTheme } = useTheme();
   const [data, setData] = useState<SettingsData | null>(null);
   const [tab, setTab] = useState<Tab>("general");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [alertSoundEnabled, setAlertSoundEnabled] = useState(() =>
+    readAlertSoundEnabled(userId, isAdmin),
+  );
+  const [permissionSaving, setPermissionSaving] = useState<Record<string, boolean>>({});
+  const [permissionToast, setPermissionToast] = useState<{ kind: "success" | "error"; message: string } | null>(null);
   const [cameraSaving, setCameraSaving] = useState<Record<string, boolean>>({});
   const [cameraFeedback, setCameraFeedback] = useState<
     Record<string, { kind: "saved" | "error"; message: string }>
@@ -126,6 +134,15 @@ export default function SettingsPage({ isAdmin }: { isAdmin: boolean }) {
     };
   }, []);
   useEffect(load, []);
+  useEffect(() => {
+    if (tab !== "permissions" || !canManageUsers) return;
+    void getSettings()
+      .then((latest) => {
+        setData(latest);
+        setSelectedUser((current) => latest.users.some((item) => item.id === current) ? current : latest.users[0]?.id ?? "");
+      })
+      .catch(() => setPermissionToast({ kind: "error", message: "Không thể tải quyền mới nhất." }));
+  }, [canManageUsers, tab]);
   useEffect(() => {
     let cancelled = false;
     let timer: number | undefined;
@@ -366,19 +383,23 @@ export default function SettingsPage({ isAdmin }: { isAdmin: boolean }) {
       )
       .catch(() => setError("Không thể thay đổi tài khoản này"));
   };
-  const togglePermission = (key: PermissionKey) => {
-    if (!selected || selected.role === "admin") return;
+  const togglePermission = async (key: PermissionKey) => {
+    if (!selected || selected.role === "admin" || permissionSaving[key]) return;
     const granted = !selected.permissions[key];
-    void setUserPermission(selected.id, key, granted)
-      .then((updated) =>
-        setData({
-          ...data,
-          users: data.users.map((item) =>
-            item.id === updated.id ? updated : item,
-          ),
-        }),
-      )
-      .catch(() => setError("Không lưu được quyền"));
+    setPermissionSaving((current) => ({ ...current, [key]: true }));
+    setPermissionToast(null);
+    try {
+      const result = await requestPermissionChange(selected, key, granted, setUserPermission);
+      if (result.error) {
+        setPermissionToast({ kind: "error", message: "Không thể cập nhật quyền. Trạng thái cũ được giữ nguyên." });
+        return;
+      }
+      const updated = result.user;
+      setData((current) => current ? { ...current, users: current.users.map((item) => item.id === updated.id ? updated : item) } : current);
+      setPermissionToast({ kind: "success", message: "Đã cập nhật quyền thành công." });
+    } finally {
+      setPermissionSaving((current) => ({ ...current, [key]: false }));
+    }
   };
   const addUser = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -420,7 +441,7 @@ export default function SettingsPage({ isAdmin }: { isAdmin: boolean }) {
       )}
       <div className="settings-shell">
         <nav className="settings-tabs">
-          {tabs.map(({ id, label, icon: Icon }) => (
+          {tabs.filter(({ id }) => canManageUsers || !["users", "permissions"].includes(id)).map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               className={tab === id ? "active" : ""}
@@ -508,7 +529,7 @@ export default function SettingsPage({ isAdmin }: { isAdmin: boolean }) {
                             <Toggle
                               label={`${camera.is_active ? "Tắt" : "Bật"} camera ${camera.name}`}
                               value={camera.is_active}
-                              disabled={busy}
+                              disabled={busy || !canManageCameras}
                               onChange={() =>
                                 void toggleCamera(camera.id, !camera.is_active)
                               }
@@ -520,7 +541,7 @@ export default function SettingsPage({ isAdmin }: { isAdmin: boolean }) {
                             <Toggle
                               label={`${camera.vision_enabled ? "Tắt" : "Bật"} Vision ${camera.name}`}
                               value={camera.vision_enabled}
-                              disabled={busy || !camera.is_active}
+                              disabled={busy || !camera.is_active || !canManageCameras}
                               onChange={() =>
                                 void toggleVision(
                                   camera.id,
@@ -691,7 +712,7 @@ export default function SettingsPage({ isAdmin }: { isAdmin: boolean }) {
             </div>
           )}
 
-          {tab === "users" && (
+          {tab === "users" && canManageUsers && (
             <div className="settings-scroll-content">
               <header className="section-page-heading">
                 <div>
@@ -758,7 +779,7 @@ export default function SettingsPage({ isAdmin }: { isAdmin: boolean }) {
             </div>
           )}
 
-          {tab === "permissions" && (
+          {tab === "permissions" && canManageUsers && (
             <div className="permission-view">
               <header className="permission-heading">
                 <div>
@@ -766,6 +787,7 @@ export default function SettingsPage({ isAdmin }: { isAdmin: boolean }) {
                   <p>Quyền caregiver được lưu trong `user_permissions`.</p>
                 </div>
               </header>
+              {permissionToast && <div className={`permission-update-toast ${permissionToast.kind}`} role={permissionToast.kind === "error" ? "alert" : "status"}>{permissionToast.message}</div>}
               <div className="permission-layout">
                 <aside className="caregiver-panel">
                   <div className="caregiver-list">
@@ -821,9 +843,9 @@ export default function SettingsPage({ isAdmin }: { isAdmin: boolean }) {
                                 label={permissionLabels[key]}
                                 value={selected.permissions[key]}
                                 disabled={
-                                  selected.role === "admin" || !selected.active
+                                  selected.role === "admin" || !selected.active || Boolean(permissionSaving[key])
                                 }
-                                onChange={() => togglePermission(key)}
+                                onChange={() => void togglePermission(key)}
                               />
                             </div>
                           ),
@@ -882,6 +904,24 @@ export default function SettingsPage({ isAdmin }: { isAdmin: boolean }) {
                       />
                     </div>
                   ))}
+                </div>
+              </section>
+              <section className="settings-section-card">
+                <div className="setting-inline-row alert-sound-setting">
+                  <span className="data-icon"><Volume2 /></span>
+                  <div>
+                    <strong>Âm thanh cảnh báo</strong>
+                    <small>Phát âm báo ngắn khi có cảnh báo mới. Trình duyệt cần một lần chạm hoặc nhấn phím để cho phép âm thanh.</small>
+                  </div>
+                  <Toggle
+                    label="Âm thanh cảnh báo"
+                    value={alertSoundEnabled}
+                    onChange={() => {
+                      const enabled = !alertSoundEnabled;
+                      setAlertSoundEnabled(enabled);
+                      saveAlertSoundEnabled(userId, enabled);
+                    }}
+                  />
                 </div>
               </section>
               <section className="settings-section-card">
