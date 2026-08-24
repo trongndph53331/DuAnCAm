@@ -67,7 +67,13 @@ export function buildAlertSpeechMessage(alert: SpeechAlert): string | null {
   return null;
 }
 
-type QueueItem = { alert: SpeechAlert; text: string; priority: number };
+type QueueItem = { text: string; priority: number };
+
+export function findVietnameseVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+  return voices.find((voice) => voice.lang.toLowerCase() === "vi-vn")
+    ?? voices.find((voice) => voice.lang.toLowerCase().startsWith("vi"))
+    ?? null;
+}
 
 export class AlertSpeechController {
   private readonly processedIds = new Set<string>();
@@ -76,8 +82,16 @@ export class AlertSpeechController {
   private speaking = false;
   private preferences: AlertSpeechPreferences;
   private vietnameseVoice: SpeechSynthesisVoice | null = null;
+  private voicesLoaded = false;
+  private voiceWaitTimer: number | undefined;
   private readonly refreshVoices = () => {
-    this.vietnameseVoice = this.synthesis?.getVoices().find((voice) => voice.lang.toLowerCase().startsWith("vi")) ?? null;
+    const voices = this.synthesis?.getVoices() ?? [];
+    if (!voices.length) return;
+    this.voicesLoaded = true;
+    this.vietnameseVoice = findVietnameseVoice(voices);
+    if (this.voiceWaitTimer) window.clearTimeout(this.voiceWaitTimer);
+    this.voiceWaitTimer = undefined;
+    this.drain();
   };
 
   constructor(
@@ -116,7 +130,7 @@ export class AlertSpeechController {
     const time = this.now();
     if (time - (this.recentKinds.get(duplicateKey) ?? Number.NEGATIVE_INFINITY) < 10_000) return "ignored";
     this.recentKinds.set(duplicateKey, time);
-    const item = { alert, text, priority: kind === "fall" ? 2 : 1 };
+    const item = { text, priority: kind === "fall" ? 2 : 1 };
     const insertAt = this.queue.findIndex((queued) => queued.priority < item.priority);
     if (insertAt < 0) this.queue.push(item); else this.queue.splice(insertAt, 0, item);
     if (this.queue.length > this.maxQueue) this.queue.pop();
@@ -126,13 +140,16 @@ export class AlertSpeechController {
 
   test(): boolean {
     if (!this.synthesis || !this.preferences.enabled || !this.preferences.activated) return false;
-    this.enqueueUtterance("Cảnh báo bằng giọng nói đã được bật.");
+    this.queue.unshift({ text: "Cảnh báo bằng giọng nói đã được bật.", priority: 3 });
+    this.drain();
     return true;
   }
 
   stop(): void {
     this.queue = [];
     this.speaking = false;
+    if (this.voiceWaitTimer) window.clearTimeout(this.voiceWaitTimer);
+    this.voiceWaitTimer = undefined;
     try { this.synthesis?.cancel(); } catch { /* Browser TTS errors are non-fatal. */ }
   }
 
@@ -143,6 +160,17 @@ export class AlertSpeechController {
 
   private drain(): void {
     if (this.speaking || !this.queue.length || !this.synthesis) return;
+    if (!this.voicesLoaded) {
+      this.refreshVoices();
+      if (!this.voicesLoaded && !this.voiceWaitTimer) {
+        this.voiceWaitTimer = window.setTimeout(() => {
+          this.voicesLoaded = true;
+          this.voiceWaitTimer = undefined;
+          this.drain();
+        }, 1_500);
+      }
+      if (!this.voicesLoaded) return;
+    }
     const item = this.queue.shift()!;
     this.enqueueUtterance(item.text);
   }
