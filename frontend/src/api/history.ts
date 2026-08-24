@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { apiClient, resolveBackendUrl } from "./client";
 
 interface HistoryPayload {
   items: Array<{
@@ -23,7 +23,13 @@ export async function getHistory() {
     fall: event.fall ? { posture: event.fall.posture, immobilityMs: event.fall.immobility_ms, confidence: event.fall.confidence } : undefined,
     alert: event.alert ? { severity: event.alert.severity, status: event.alert.status } : undefined,
     verdict: event.verdict ?? undefined,
-    media: event.media.map((item) => ({ id: item.id, subjectType: item.subject_type, isBlurred: item.is_blurred, label: item.label, url: item.url })),
+    media: event.media.map((item) => ({
+      id: item.id,
+      subjectType: item.subject_type,
+      isBlurred: item.is_blurred,
+      label: item.label,
+      url: item.url ? resolveBackendUrl(item.url) : undefined,
+    })),
     actions: event.actions.map((item) => ({ id: item.id, actor: item.actor, action: item.action, note: item.note ?? undefined, verdict: item.verdict ?? undefined, at: item.at })),
   }));
 }
