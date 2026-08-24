@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Sun,
   UsersRound,
+  Volume2,
 } from "lucide-react";
 import AlertsPage from "./features/alerts/AlertsPage";
 import CameraPage from "./pages/CameraPage";
@@ -39,6 +40,15 @@ import {
   type RealtimeAlertMessage,
 } from "./features/alerts/alertNotifications";
 import { subscribeToAlertStream } from "./features/alerts/alertStream";
+import {
+  ALERT_SPEECH_PREFERENCE_EVENT,
+  ALERT_SPEECH_TEST_EVENT,
+  AlertSpeechController,
+  browserSpeechSynthesis,
+  readAlertSpeechPreferences,
+  saveAlertSpeechPreferences,
+  type AlertSpeechPreferences,
+} from "./features/alerts/alertSpeech";
 
 const navItems = [
   { label: "Tổng quan", path: "/", icon: Home, badge: undefined },
@@ -82,10 +92,16 @@ function DashboardApp({
     readAlertSoundEnabled(user.id, user.role === "admin"),
   ).current;
   const [soundPermissionHint, setSoundPermissionHint] = useState(initialAlertSoundEnabled);
+  const initialSpeechPreferences = useRef(readAlertSpeechPreferences(user.id)).current;
+  const [speechPreferences, setSpeechPreferences] = useState(initialSpeechPreferences);
+  const [speechActivationHint, setSpeechActivationHint] = useState(
+    initialSpeechPreferences.enabled && !initialSpeechPreferences.activated,
+  );
   const alertToastTimerRef = useRef<number | undefined>(undefined);
   const loggingOutRef = useRef(false);
   const alertPlayerRef = useRef<WebAudioAlertPlayer | null>(null);
   const alertControllerRef = useRef<AlertNotificationController | null>(null);
+  const speechControllerRef = useRef<AlertSpeechController | null>(null);
   if (!alertPlayerRef.current) alertPlayerRef.current = new WebAudioAlertPlayer();
   if (!alertControllerRef.current) {
     alertControllerRef.current = new AlertNotificationController(
@@ -98,6 +114,9 @@ function DashboardApp({
         alertToastTimerRef.current = window.setTimeout(() => setAlertToast(false), 4_000);
       },
     );
+  }
+  if (!speechControllerRef.current) {
+    speechControllerRef.current = new AlertSpeechController(initialSpeechPreferences, browserSpeechSynthesis());
   }
   const accountRef = useRef<HTMLDivElement>(null);
   const cancelLogoutRef = useRef<HTMLButtonElement>(null);
@@ -153,6 +172,13 @@ function DashboardApp({
       void player.unlock().then((allowed) => {
         if (allowed) setSoundPermissionHint(false);
       });
+      if (speechPreferences.enabled && !speechPreferences.activated) {
+        const next = { ...speechPreferences, activated: true };
+        setSpeechPreferences(next);
+        setSpeechActivationHint(false);
+        speechControllerRef.current?.setPreferences(next);
+        saveAlertSpeechPreferences(user.id, next);
+      }
     };
     document.addEventListener("pointerdown", unlock, { passive: true });
     document.addEventListener("keydown", unlock);
@@ -162,7 +188,7 @@ function DashboardApp({
       document.removeEventListener("keydown", unlock);
       document.removeEventListener("touchend", unlock);
     };
-  }, []);
+  }, [speechPreferences, user.id]);
   useEffect(() => {
     const syncPreference = (event: Event) => {
       const detail = (event as CustomEvent<{ userId: string; enabled: boolean }>).detail;
@@ -174,6 +200,22 @@ function DashboardApp({
     return () => window.removeEventListener(ALERT_SOUND_PREFERENCE_EVENT, syncPreference);
   }, [user.id]);
   useEffect(() => {
+    const syncSpeechPreference = (event: Event) => {
+      const detail = (event as CustomEvent<{ userId: string; preferences: AlertSpeechPreferences }>).detail;
+      if (detail?.userId !== user.id) return;
+      setSpeechPreferences(detail.preferences);
+      setSpeechActivationHint(detail.preferences.enabled && !detail.preferences.activated);
+      speechControllerRef.current?.setPreferences(detail.preferences);
+    };
+    const testSpeech = () => { speechControllerRef.current?.test(); };
+    window.addEventListener(ALERT_SPEECH_PREFERENCE_EVENT, syncSpeechPreference);
+    window.addEventListener(ALERT_SPEECH_TEST_EVENT, testSpeech);
+    return () => {
+      window.removeEventListener(ALERT_SPEECH_PREFERENCE_EVENT, syncSpeechPreference);
+      window.removeEventListener(ALERT_SPEECH_TEST_EVENT, testSpeech);
+    };
+  }, [user.id]);
+  useEffect(() => {
     const sync = () =>
       window.dispatchEvent(new CustomEvent("antam:alerts-changed"));
     const receiveAlert = (data: string) => {
@@ -181,6 +223,7 @@ function DashboardApp({
       try {
         const message = JSON.parse(data) as RealtimeAlertMessage;
         alertControllerRef.current?.handle(message, !loggingOutRef.current);
+        speechControllerRef.current?.handle(message, !loggingOutRef.current);
       } catch {
         // A malformed realtime message can still trigger the normal list refresh.
       }
@@ -190,6 +233,7 @@ function DashboardApp({
   useEffect(() => () => {
     if (alertToastTimerRef.current) window.clearTimeout(alertToastTimerRef.current);
     alertPlayerRef.current?.close();
+    speechControllerRef.current?.destroy();
   }, []);
   useEffect(() => {
     const refreshUnread = () => {
@@ -257,6 +301,7 @@ function DashboardApp({
   };
   const confirmLogout = async () => {
     loggingOutRef.current = true;
+    speechControllerRef.current?.stop();
     setLogoutPending(true);
     setLogoutError("");
     try {
@@ -485,6 +530,11 @@ function DashboardApp({
         <div className="realtime-alert-toast" role="status" aria-live="assertive">
           <Bell />
           <span><strong>Có cảnh báo mới</strong><small>Mở mục Cảnh báo để xem chi tiết.</small></span>
+          {speechPreferences.enabled && (
+            <button type="button" className="toast-mute-speech" onClick={() => {
+              saveAlertSpeechPreferences(user.id, { ...speechPreferences, enabled: false });
+            }}>Tắt giọng nói</button>
+          )}
         </div>
       )}
       {soundPermissionHint && (
@@ -492,6 +542,15 @@ function DashboardApp({
           <AlertTriangle />
           <span><strong>Chưa thể phát âm thanh</strong><small>Chạm vào trang hoặc nút bên cạnh để cho phép âm thanh cảnh báo.</small></span>
           <button type="button" onClick={() => void alertPlayerRef.current?.unlock().then((allowed) => setSoundPermissionHint(!allowed))}>Bật âm thanh</button>
+        </div>
+      )}
+      {speechActivationHint && (
+        <div className={`alert-sound-permission speech-permission ${alertToast || soundPermissionHint ? "" : "standalone"}`} role="status">
+          <Volume2 />
+          <span><strong>Nhấn để bật cảnh báo bằng giọng nói.</strong><small>Tính năng chỉ phát âm thanh và không sử dụng microphone.</small></span>
+          <button type="button" onClick={() => {
+            saveAlertSpeechPreferences(user.id, { ...speechPreferences, activated: true });
+          }}>Bật âm thanh</button>
         </div>
       )}
       {logoutConfirmOpen && (

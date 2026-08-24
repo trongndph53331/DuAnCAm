@@ -37,6 +37,14 @@ import {
 import "./settings.css";
 import { useTheme, type ThemePreference } from "../design-system";
 import { readAlertSoundEnabled, saveAlertSoundEnabled } from "../features/alerts/alertNotifications";
+import {
+  ALERT_SPEECH_TEST_EVENT,
+  browserSpeechSynthesis,
+  readAlertSpeechPreferences,
+  saveAlertSpeechPreferences,
+  type AlertSpeechPreferences,
+  type AlertSpeechSpeed,
+} from "../features/alerts/alertSpeech";
 import { requestPermissionChange } from "../auth/permissionState";
 
 const tabs = [
@@ -90,6 +98,14 @@ export default function SettingsPage({ isAdmin, userId, canManageCameras, canMan
   const [alertSoundEnabled, setAlertSoundEnabled] = useState(() =>
     readAlertSoundEnabled(userId, isAdmin),
   );
+  const [speechPreferences, setSpeechPreferences] = useState(() => readAlertSpeechPreferences(userId));
+  const speechSupported = browserSpeechSynthesis() !== null;
+  const updateSpeechPreferences = (changes: Partial<AlertSpeechPreferences>) => {
+    const next = { ...speechPreferences, ...changes };
+    setSpeechPreferences(next);
+    saveAlertSpeechPreferences(userId, next);
+    return next;
+  };
   const [permissionSaving, setPermissionSaving] = useState<Record<string, boolean>>({});
   const [permissionToast, setPermissionToast] = useState<{ kind: "success" | "error"; message: string } | null>(null);
   const [cameraSaving, setCameraSaving] = useState<Record<string, boolean>>({});
@@ -922,6 +938,56 @@ export default function SettingsPage({ isAdmin, userId, canManageCameras, canMan
                       saveAlertSoundEnabled(userId, enabled);
                     }}
                   />
+                </div>
+              </section>
+              <section className="settings-section-card voice-alert-settings">
+                <div className="setting-inline-row">
+                  <span className="data-icon"><Volume2 /></span>
+                  <div>
+                    <strong>Cảnh báo bằng giọng nói</strong>
+                    <small>Đọc cảnh báo mới bằng tiếng Việt. Cấu hình được lưu riêng cho tài khoản này.</small>
+                  </div>
+                  <Toggle
+                    label="Cảnh báo bằng giọng nói"
+                    disabled={!speechSupported}
+                    value={speechPreferences.enabled && speechSupported}
+                    onChange={() => updateSpeechPreferences({ enabled: !speechPreferences.enabled })}
+                  />
+                </div>
+                {!speechSupported && <p className="voice-unsupported" role="status">Trình duyệt này không hỗ trợ cảnh báo bằng giọng nói.</p>}
+                <div className="voice-controls" aria-disabled={!speechSupported || !speechPreferences.enabled}>
+                  <label>
+                    <span>Âm lượng <strong>{Math.round(speechPreferences.volume * 100)}%</strong></span>
+                    <input
+                      aria-label="Âm lượng giọng nói"
+                      type="range" min="0" max="1" step="0.1"
+                      disabled={!speechSupported || !speechPreferences.enabled}
+                      value={speechPreferences.volume}
+                      onChange={(event) => updateSpeechPreferences({ volume: Number(event.target.value) })}
+                    />
+                  </label>
+                  <label>
+                    <span>Tốc độ đọc</span>
+                    <select
+                      aria-label="Tốc độ đọc cảnh báo"
+                      disabled={!speechSupported || !speechPreferences.enabled}
+                      value={speechPreferences.speed}
+                      onChange={(event) => updateSpeechPreferences({ speed: event.target.value as AlertSpeechSpeed })}
+                    >
+                      <option value="slow">Chậm</option>
+                      <option value="normal">Bình thường</option>
+                      <option value="fast">Nhanh</option>
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    className="settings-primary-small"
+                    disabled={!speechSupported || !speechPreferences.enabled}
+                    onClick={() => {
+                      updateSpeechPreferences({ activated: true });
+                      window.dispatchEvent(new Event(ALERT_SPEECH_TEST_EVENT));
+                    }}
+                  >Nghe thử</button>
                 </div>
               </section>
               <section className="settings-section-card">
