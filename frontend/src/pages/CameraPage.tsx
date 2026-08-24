@@ -120,6 +120,14 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
       .then((camera) => setEvents(camera.events ?? []))
       .catch(() => setEvents([]));
   }, [selectedId]);
+  useEffect(() => {
+    if (!actionError && !actionSuccess) return;
+    const timer = window.setTimeout(() => {
+      setActionError("");
+      setActionSuccess("");
+    }, 2_000);
+    return () => window.clearTimeout(timer);
+  }, [actionError, actionSuccess]);
 
   const selected = feeds.find((feed) => feed.id === selectedId);
   useEffect(() => {
@@ -490,9 +498,13 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
                 />
               </label>
             </div>
-            {actionError && <p className="camera-edit-error" role="alert">{actionError}</p>}
-            {actionSuccess && <p className="camera-edit-success" role="status"><Check /> {actionSuccess}</p>}
           </section>
+        )}
+        {(actionError || actionSuccess) && (
+          <div className={`camera-action-toast ${actionError ? "error" : "success"}`} role={actionError ? "alert" : "status"} aria-live="polite">
+            {actionError ? <AlertTriangle /> : <Check />}
+            <span>{actionError || actionSuccess}</span>
+          </div>
         )}
         {scenarioToDelete && (
           <div className="demo-name-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-video-title">
