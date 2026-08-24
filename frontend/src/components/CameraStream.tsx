@@ -22,6 +22,22 @@ export function CameraStream({ cameraId, streamReady, streamUrl, className, onEr
       if (retryTimer.current !== null) window.clearTimeout(retryTimer.current);
     };
   }, [streamUrl, streamRevision]);
+  useEffect(() => {
+    const reconnect = () => {
+      if (document.visibilityState === "visible") {
+        setRetryNonce((value) => value + 1);
+      }
+    };
+    const handleVisibility = () => reconnect();
+    window.addEventListener("focus", reconnect);
+    window.addEventListener("online", reconnect);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("focus", reconnect);
+      window.removeEventListener("online", reconnect);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, []);
 
   if (streamReady && streamUrl) {
     const resolvedStreamUrl=resolveBackendUrl(streamUrl);
@@ -37,7 +53,7 @@ export function CameraStream({ cameraId, streamReady, streamUrl, className, onEr
         setRetryNonce((value) => value + 1);
       }, 1500);
     };
-    return <img className={streamClassName} src={configured} alt={`Luồng trực tiếp ${cameraId}`} onError={retry} />;
+    return <img key={configured} className={streamClassName} src={configured} alt={`Luồng trực tiếp ${cameraId}`} onError={retry} />;
   }
   return null;
 }
