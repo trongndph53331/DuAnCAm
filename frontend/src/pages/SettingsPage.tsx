@@ -40,7 +40,6 @@ import { readAlertSoundEnabled, saveAlertSoundEnabled } from "../features/alerts
 import {
   ALERT_SPEECH_TEST_EVENT,
   browserSpeechSynthesis,
-  findVietnameseVoice,
   readAlertSpeechPreferences,
   saveAlertSpeechPreferences,
   type AlertSpeechPreferences,
@@ -101,7 +100,6 @@ export default function SettingsPage({ isAdmin, userId, canManageCameras, canMan
   );
   const [speechPreferences, setSpeechPreferences] = useState(() => readAlertSpeechPreferences(userId));
   const speechSupported = browserSpeechSynthesis() !== null;
-  const [speechVoice, setSpeechVoice] = useState<{ loaded: boolean; name: string | null }>({ loaded: false, name: null });
   const updateSpeechPreferences = (changes: Partial<AlertSpeechPreferences>) => {
     const next = { ...speechPreferences, ...changes };
     setSpeechPreferences(next);
@@ -149,21 +147,6 @@ export default function SettingsPage({ isAdmin, userId, canManageCameras, canMan
       if (autoSaveTimerRef.current)
         window.clearTimeout(autoSaveTimerRef.current);
       Object.values(feedbackTimersRef.current).forEach(window.clearTimeout);
-    };
-  }, []);
-  useEffect(() => {
-    const synthesis = browserSpeechSynthesis();
-    if (!synthesis) return;
-    const updateVoice = () => {
-      const voices = synthesis.getVoices();
-      if (voices.length) setSpeechVoice({ loaded: true, name: findVietnameseVoice(voices)?.name ?? null });
-    };
-    updateVoice();
-    synthesis.addEventListener("voiceschanged", updateVoice);
-    const timer = window.setTimeout(() => setSpeechVoice((current) => current.loaded ? current : { loaded: true, name: null }), 2_000);
-    return () => {
-      synthesis.removeEventListener("voiceschanged", updateVoice);
-      window.clearTimeout(timer);
     };
   }, []);
   useEffect(load, []);
@@ -972,15 +955,6 @@ export default function SettingsPage({ isAdmin, userId, canManageCameras, canMan
                   />
                 </div>
                 {!speechSupported && <p className="voice-unsupported" role="status">Trình duyệt này không hỗ trợ cảnh báo bằng giọng nói.</p>}
-                {speechSupported && (
-                  <p className={`voice-status ${speechVoice.loaded && !speechVoice.name ? "warning" : ""}`} role="status">
-                    {!speechVoice.loaded
-                      ? "Đang tải danh sách giọng tiếng Việt…"
-                      : speechVoice.name
-                        ? `Giọng tiếng Việt: ${speechVoice.name}`
-                        : "Chrome chưa có giọng tiếng Việt. Hãy cài giọng Vietnamese trong hệ điều hành rồi mở lại trình duyệt."}
-                  </p>
-                )}
                 <div className="voice-controls" aria-disabled={!speechSupported || !speechPreferences.enabled}>
                   <label>
                     <span>Âm lượng <strong>{Math.round(speechPreferences.volume * 100)}%</strong></span>
