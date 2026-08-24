@@ -7,9 +7,9 @@ from pathlib import Path
 
 from src.config import get_settings
 
-BUILTIN_LAPTOP_CAMERA_ID = "8d691d84-8c3e-4b8f-96ee-2ef832c49e51"
+BUILTIN_LAPTOP_CAMERA_ID = "8d691d84-8c3e-4b8f-96ee-2ef832c49e51"  # legacy/history only
 BUILTIN_VIDEO_CAMERA_ID = "73da9967-26fc-4ed0-b049-bbd901453c8a"
-DEFAULT_VIDEO_SOURCE = "videos/kich_ban3.mp4"
+DEFAULT_VIDEO_SOURCE = "videos/video_preview_h264.mp4"
 
 
 def sqlite_path() -> Path:
@@ -43,21 +43,11 @@ def ensure_builtin_cameras(connection: sqlite3.Connection) -> None:
     """Create missing built-in cameras without resetting existing records."""
     defaults = (
         (
-            BUILTIN_LAPTOP_CAMERA_ID,
-            "Laptop Camera",
-            "webcam",
-            "0",
-            "Laptop",
-            "webcam",
-            "0",
-            None,
-        ),
-        (
             BUILTIN_VIDEO_CAMERA_ID,
-            "Video Camera",
+            "Camera demo",
             "video_file",
             DEFAULT_VIDEO_SOURCE,
-            "Video",
+            "An Tâm Home",
             "video_file",
             DEFAULT_VIDEO_SOURCE,
             DEFAULT_VIDEO_SOURCE,
@@ -83,6 +73,12 @@ def ensure_builtin_cameras(connection: sqlite3.Connection) -> None:
                VALUES (?, ?, ?, ?)""",
             (camera_id, source_kind, source_uri, playback_path),
         )
+    # Keep old rows (and therefore their alerts/metrics) but expose only the
+    # single stable demo camera throughout the application.
+    connection.execute(
+        "UPDATE cameras SET is_archived = CASE WHEN id = ? THEN 0 ELSE 1 END",
+        (BUILTIN_VIDEO_CAMERA_ID,),
+    )
 
 
 def _apply_runtime_migrations(connection: sqlite3.Connection) -> None:
@@ -256,6 +252,10 @@ def _apply_runtime_migrations(connection: sqlite3.Connection) -> None:
     if "vision_enabled" not in camera_columns:
         connection.execute(
             "ALTER TABLE cameras ADD COLUMN vision_enabled INTEGER NOT NULL DEFAULT 1 CHECK (vision_enabled IN (0, 1))"
+        )
+    if "is_archived" not in camera_columns:
+        connection.execute(
+            "ALTER TABLE cameras ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0 CHECK (is_archived IN (0, 1))"
         )
     user_columns = {row[1] for row in connection.execute("PRAGMA table_info(users)").fetchall()}
     if "password_hash" not in user_columns:

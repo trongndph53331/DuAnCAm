@@ -15,7 +15,6 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Sun,
-  Trash2,
   UserPlus,
   UsersRound,
   X,
@@ -34,8 +33,6 @@ import {
   type SettingsData,
   type SettingsUser,
 } from "../api/settings";
-import { deleteCamera } from "../api/cameras";
-import { createMockCamera } from "../api/cameras";
 import "./settings.css";
 import { useTheme, type ThemePreference } from "../design-system";
 
@@ -93,9 +90,6 @@ export default function SettingsPage({ isAdmin }: { isAdmin: boolean }) {
   >({});
   const [invite, setInvite] = useState(false);
   const [selectedUser, setSelectedUser] = useState("");
-  const [addCamera, setAddCamera] = useState(false);
-  const [cameraUploading, setCameraUploading] = useState(false);
-  const [cameraUploadError, setCameraUploadError] = useState("");
   const settingsRequestInFlight = useRef(false);
   const dirtyRef = useRef(false);
   const pollErrorLoggedRef = useRef(false);
@@ -360,21 +354,6 @@ export default function SettingsPage({ isAdmin }: { isAdmin: boolean }) {
       setCameraSaving((current) => ({ ...current, [id]: false }));
     }
   };
-  const removeCamera = async (camera: SettingsData["cameras"][number]) => {
-    if (cameraSaving[camera.id] || !window.confirm(`Xóa camera "${camera.name}"?`)) return;
-    setCameraSaving((current) => ({ ...current, [camera.id]: true }));
-    try {
-      if (camera.is_active) await setSettingsCameraActive(camera.id, false);
-      await deleteCamera(camera.id);
-      setData((current) => current ? ({ ...current, cameras: current.cameras.filter((item) => item.id !== camera.id) }) : current);
-      window.dispatchEvent(new CustomEvent("camera-settings-updated"));
-    } catch (reason) {
-      showCameraFeedback(camera.id, "error", reason instanceof Error ? reason.message : "Không thể xóa camera");
-      load();
-    } finally {
-      setCameraSaving((current) => ({ ...current, [camera.id]: false }));
-    }
-  };
   const toggleUser = (user: SettingsUser) => {
     void setSettingsUserActive(user.id, !user.active)
       .then((updated) =>
@@ -416,24 +395,6 @@ export default function SettingsPage({ isAdmin }: { isAdmin: boolean }) {
       setSelectedUser(user.id);
     } catch {
       setError("Email đã tồn tại hoặc dữ liệu không hợp lệ");
-    }
-  };
-  const addMockCamera = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (cameraUploading) return;
-    setCameraUploading(true);
-    setCameraUploadError("");
-    try {
-      await createMockCamera(new FormData(event.currentTarget));
-      setAddCamera(false);
-      load();
-      window.dispatchEvent(new CustomEvent("camera-settings-updated"));
-    } catch (reason) {
-      setCameraUploadError(
-        reason instanceof Error ? reason.message : "Không thể tải video lên",
-      );
-    } finally {
-      setCameraUploading(false);
     }
   };
 
@@ -491,18 +452,6 @@ export default function SettingsPage({ isAdmin }: { isAdmin: boolean }) {
                       được tự động lưu ngay sau khi thay đổi.
                     </p>
                   </div>
-                  {isAdmin && (
-                    <button
-                      className="settings-primary-small"
-                      type="button"
-                      onClick={() => {
-                        setCameraUploadError("");
-                        setAddCamera(true);
-                      }}
-                    >
-                      <Plus /> Thêm cam
-                    </button>
-                  )}
                 </div>
                 <div className="settings-data-list">
                   {data.cameras.map((camera) => {
@@ -581,17 +530,6 @@ export default function SettingsPage({ isAdmin }: { isAdmin: boolean }) {
                             />
                           </label>
                         </div>
-                        {isAdmin && (
-                          <button
-                            type="button"
-                            className="camera-row-delete"
-                            disabled={busy}
-                            title={`Xóa ${camera.name}`}
-                            onClick={() => void removeCamera(camera)}
-                          >
-                            <Trash2 /> <span>Xóa</span>
-                          </button>
-                        )}
                       </div>
                     );
                   })}
@@ -1082,80 +1020,6 @@ export default function SettingsPage({ isAdmin }: { isAdmin: boolean }) {
               </button>
               <button type="submit">
                 <Plus /> Thêm
-              </button>
-            </footer>
-          </form>
-        </div>
-      )}
-      {isAdmin && addCamera && (
-        <div className="settings-modal-backdrop">
-          <form className="settings-modal" onSubmit={addMockCamera}>
-            <header>
-              <div>
-                <h3>Thêm camera mô phỏng</h3>
-                <p>
-                  Video sẽ phát lặp như camera thời gian thực. Vision mặc định
-                  tắt để tránh làm máy bị lag.
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={cameraUploading}
-                onClick={() => setAddCamera(false)}
-              >
-                <X />
-              </button>
-            </header>
-            <label>
-              <span>Tên camera</span>
-              <input
-                name="name"
-                maxLength={255}
-                placeholder="Ví dụ: Camera phòng khách"
-                required
-              />
-            </label>
-            <label>
-              <span>Vị trí</span>
-              <input
-                name="location"
-                maxLength={255}
-                placeholder="Ví dụ: Phòng khách"
-                required
-              />
-            </label>
-            <label>
-              <span>Video mock (tối đa 95 MB)</span>
-              <input
-                name="video"
-                type="file"
-                accept="video/mp4,video/quicktime,video/webm,.avi,.mkv"
-                required
-              />
-            </label>
-            {cameraUploadError && (
-              <p className="camera-upload-error" role="alert">
-                <AlertTriangle /> {cameraUploadError}
-              </p>
-            )}
-            <footer>
-              <button
-                type="button"
-                disabled={cameraUploading}
-                onClick={() => setAddCamera(false)}
-              >
-                Huỷ
-              </button>
-              <button type="submit" disabled={cameraUploading}>
-                {cameraUploading ? (
-                  <>
-                    <RefreshCw className="spin" /> Đang tải video…
-                  </>
-                ) : (
-                  <>
-                    <Plus /> Thêm camera
-                  </>
-                )}
               </button>
             </footer>
           </form>

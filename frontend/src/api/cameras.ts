@@ -1,4 +1,4 @@
-import { apiClient, apiCommand } from "./client";
+import { apiClient } from "./client";
 
 export interface CameraEventDto {
   id: string;
@@ -38,33 +38,28 @@ export async function getCameras(): Promise<CameraDto[]> {
   return response.items;
 }
 
-export function createMockCamera(data: FormData): Promise<CameraDto> {
-  return apiClient("/cameras/mock", { method: "POST", body: data });
+export interface DemoScenarioDto { id: string; name: string }
+
+export async function getDemoScenarios(): Promise<DemoScenarioDto[]> {
+  const response = await apiClient<{ items: DemoScenarioDto[] }>("/cameras/demo-scenarios");
+  return response.items;
+}
+
+export function selectDemoScenario(scenarioId: string): Promise<CameraDto> {
+  return apiClient("/cameras/demo-scenario", {
+    method: "POST",
+    body: JSON.stringify({ scenario_id: scenarioId }),
+  });
+}
+
+export function uploadDemoVideo(video: File): Promise<CameraDto> {
+  const data = new FormData();
+  data.append("video", video);
+  return apiClient("/cameras/demo-video", { method: "POST", body: data });
 }
 
 export function getCamera(id: string): Promise<CameraDto> {
   return apiClient(`/cameras/${encodeURIComponent(id)}`);
-}
-
-export function updateCameraSource(
-  id: string,
-  source: Pick<CameraDto, "source_kind"> & { source_uri?: string; playback_path?: string },
-): Promise<CameraDto> {
-  return apiClient(`/cameras/${encodeURIComponent(id)}/source`, {
-    method: "PATCH",
-    body: JSON.stringify(source),
-  });
-}
-
-export function updateCamera(
-  id: string,
-  data: { name:string; location:string; source_kind:CameraDto["source_kind"]; source_uri?:string; playback_path?:string },
-): Promise<CameraDto> {
-  return apiClient(`/cameras/${encodeURIComponent(id)}`, { method:"PATCH", body:JSON.stringify(data) });
-}
-
-export function deleteCamera(id:string): Promise<void> {
-  return apiCommand(`/cameras/${encodeURIComponent(id)}`, { method:"DELETE" });
 }
 
 export function setCameraEnabled(id: string, enabled: boolean): Promise<unknown> {

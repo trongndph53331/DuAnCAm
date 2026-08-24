@@ -21,6 +21,7 @@ class OverviewService:
                           c.operational_status, c.last_seen_at, c.vision_enabled,
                           cs.source_kind, cs.playback_path
                    FROM cameras c LEFT JOIN camera_sources cs ON cs.camera_id = c.id
+                   WHERE c.is_archived = 0
                    ORDER BY c.name"""
             ).fetchall()
             recognized_today = connection.execute(

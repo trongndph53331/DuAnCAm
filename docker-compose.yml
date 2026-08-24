@@ -4,7 +4,9 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "${APP_PORT:-8000}:8000"
+      # Keep the API private to this computer. Public access should go through
+      # the frontend reverse proxy (and later an HTTPS tunnel).
+      - "127.0.0.1:${APP_PORT:-8000}:8000"
     env_file:
       - path: .env
         required: false
@@ -13,7 +15,7 @@ services:
       APP_PORT: 8000
       DATABASE_URL: sqlite:///./data/app.db
       CHROMA_PERSIST_DIR: ./data/chroma
-      CORS_ORIGINS: http://localhost:${FRONTEND_PORT:-5173}
+      CORS_ORIGINS: http://localhost:${FRONTEND_PORT:-5173},https://app.antamonline.website,https://duancam.pages.dev
       VISION_ENGINE: sda
       VISION_DEVICE: cpu
       VISION_IDENTITY_ENABLED: ${VISION_IDENTITY_ENABLED:-false}
@@ -22,6 +24,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./snapshots:/app/snapshots
+      - ./uploads/videos:/app/uploads/videos
       # The current SQLite camera records reference demo files below this path.
       - ./frontend/public:/app/frontend/public:ro
       - insightface_models:/home/appuser/.insightface
@@ -42,10 +45,21 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "${FRONTEND_PORT:-5173}:80"
+      # Bind locally so the app is not exposed directly to the LAN/Internet.
+      - "127.0.0.1:${FRONTEND_PORT:-5173}:80"
     depends_on:
       backend:
         condition: service_healthy
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      frontend:
+        condition: service_started
     restart: unless-stopped
 
 volumes:

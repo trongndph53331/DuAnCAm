@@ -141,6 +141,8 @@ Desktop.ini
 $RECYCLE.BIN/
 /tests/.tmp/
 /data/vision-cache/
+/uploads/videos/*
+!/uploads/videos/.gitkeep
 # Archives / temporary source bundles
 *.zip
 *.7z

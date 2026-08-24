@@ -6,11 +6,21 @@ import numpy as np
 import pytest
 from starlette.requests import Request
 
+from src.api.auth import require_admin
 from src.api.camera_stream import stream_camera
 from src.database import BUILTIN_VIDEO_CAMERA_ID
 from src.main import app
 
 CAMERA_ID = BUILTIN_VIDEO_CAMERA_ID
+
+
+@pytest.fixture(autouse=True)
+def admin_camera_api():
+    app.dependency_overrides[require_admin] = lambda: {"role": "admin", "force_password_change": False}
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(require_admin, None)
 
 
 class FakeCapture:

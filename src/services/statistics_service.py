@@ -237,6 +237,7 @@ class StatisticsService:
                      count(CASE WHEN ad.review_result IS NOT NULL THEN 1 END) AS reviewed_count
               FROM cameras c
               LEFT JOIN alert_data ad ON ad.camera_id = c.id
+              WHERE c.is_archived = 0
               GROUP BY c.id ORDER BY alert_count DESC, c.name""",
             cls._params(start, end),
         ).fetchall()
@@ -293,6 +294,7 @@ class StatisticsService:
                    WHERE newest.camera_id = c.id
                    ORDER BY newest.measured_at DESC, newest.id DESC LIMIT 1
                )
+               WHERE c.is_archived = 0
                ORDER BY c.name"""
         ).fetchall()
         return [dict(row) for row in rows]
@@ -412,6 +414,7 @@ class StatisticsService:
                LEFT JOIN operational_camera_metrics ocm
                  ON ocm.camera_id = c.id AND ocm.measured_at >= ? AND ocm.measured_at < ?
                 AND (ocm.vision_fps IS NOT NULL OR ocm.vision_processing_latency_ms IS NOT NULL)
+               WHERE c.is_archived = 0
                GROUP BY c.id, c.name""",
             params,
         ).fetchall()
@@ -437,6 +440,7 @@ class StatisticsService:
                        SELECT b.*, c.name AS camera_name,
                               row_number() OVER (PARTITION BY b.camera_id ORDER BY b.bucket_start DESC) AS point_rank
                        FROM bucketed b JOIN cameras c ON c.id = b.camera_id
+                       WHERE c.is_archived = 0
                    )
                    SELECT camera_id, camera_name, bucket_start AS measured_at, raw_fps, vision_fps,
                           vision_processing_latency_ms, vision_drop_ratio, max_pending,
@@ -454,6 +458,7 @@ class StatisticsService:
                        FROM operational_camera_metrics ocm
                        JOIN cameras c ON c.id = ocm.camera_id
                        WHERE ocm.measured_at >= ? AND ocm.measured_at < ?
+                         AND c.is_archived = 0
                          AND (ocm.vision_fps IS NOT NULL OR ocm.vision_processing_latency_ms IS NOT NULL)
                    )
                    SELECT camera_id, camera_name, measured_at, raw_fps, vision_fps,

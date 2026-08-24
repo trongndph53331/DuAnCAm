@@ -23,7 +23,7 @@ def require_admin(user: dict = Depends(current_user)) -> dict:
     if user["force_password_change"]:
         raise HTTPException(403, "Bạn phải đổi mật khẩu trước khi tiếp tục")
     if user["role"] != "admin":
-        raise HTTPException(403, "Chỉ quản trị viên được xem thống kê hệ thống")
+        raise HTTPException(403, "Chỉ quản trị viên được thực hiện thao tác này")
     return user
 
 

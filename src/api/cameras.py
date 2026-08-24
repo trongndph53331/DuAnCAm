@@ -1,27 +1,31 @@
 import asyncio
-from typing import Literal
+from pathlib import Path
+from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Request, Response
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
+from pydantic import BaseModel
 
-from src.services.camera_service import CameraConflictError, CameraNotFoundError, camera_service
+from src.api.auth import require_admin
+from src.database import BUILTIN_VIDEO_CAMERA_ID
+from src.services.camera_service import CameraNotFoundError, camera_service
 
 router = APIRouter(prefix="/cameras", tags=["Cameras"])
-
-
-class CameraSourceUpdate(BaseModel):
-    source_kind: Literal["video_file", "webcam", "rtsp"]
-    source_uri: str | None = None
-    playback_path: str | None = None
-
-
-class CameraUpdate(CameraSourceUpdate):
-    name: str = Field(min_length=1, max_length=255, pattern=r".*\S.*")
-    location: str = Field(min_length=1, max_length=255, pattern=r".*\S.*")
+UPLOAD_DIRECTORY = Path("uploads/videos")
+MAX_VIDEO_BYTES = 95 * 1024 * 1024
+ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".mov", ".webm"}
+DEMO_SCENARIOS = (
+    {"id": "daily-activity", "name": "Sinh hoạt thường ngày", "source": "videos/video_preview_h264.mp4"},
+    {"id": "fall-bedroom", "name": "Té ngã trong phòng", "source": "videos/06.mp4"},
+    {"id": "fall-living-room", "name": "Té ngã tại phòng khách", "source": "videos/20.mp4"},
+)
 
 
 class IdentityUpdate(BaseModel):
     enabled: bool
+
+
+class DemoScenarioUpdate(BaseModel):
+    scenario_id: str
 
 
 @router.get("")
@@ -29,6 +33,64 @@ async def list_cameras(request: Request):
     runtime = request.app.state.local_runtime
     cameras = camera_service.list_cameras(runtime.camera, runtime.vision, runtime.frame_hub)
     return {"items": cameras, "total": len(cameras)}
+
+
+@router.get("/demo-scenarios")
+async def list_demo_scenarios():
+    return {"items": [{"id": item["id"], "name": item["name"]} for item in DEMO_SCENARIOS]}
+
+
+def _replace_demo_source(request: Request, source_path: str):
+    camera_service.update_source(BUILTIN_VIDEO_CAMERA_ID, "video_file", source_path, source_path)
+    runtime = request.app.state.local_runtime
+    runtime.restart_camera_if_enabled(BUILTIN_VIDEO_CAMERA_ID)
+    return camera_service.get_camera(BUILTIN_VIDEO_CAMERA_ID, runtime.camera, runtime.vision, runtime.frame_hub)
+
+
+@router.post("/demo-scenario")
+async def select_demo_scenario(
+    data: DemoScenarioUpdate, request: Request, _admin: dict = Depends(require_admin)
+):
+    scenario = next((item for item in DEMO_SCENARIOS if item["id"] == data.scenario_id), None)
+    if scenario is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy kịch bản demo")
+    try:
+        camera_service.resolve_video_path(scenario["source"])
+        return _replace_demo_source(request, scenario["source"])
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/demo-video")
+async def upload_demo_video(
+    request: Request, video: UploadFile = File(...), _admin: dict = Depends(require_admin)
+):
+    suffix = Path(video.filename or "").suffix.lower()
+    if suffix not in ALLOWED_VIDEO_EXTENSIONS:
+        raise HTTPException(status_code=422, detail="Chỉ hỗ trợ video MP4, MOV hoặc WebM")
+
+    UPLOAD_DIRECTORY.mkdir(parents=True, exist_ok=True)
+    target = UPLOAD_DIRECTORY / f"{uuid4().hex}{suffix}"
+    size = 0
+    try:
+        with target.open("xb") as output:
+            while chunk := await video.read(1024 * 1024):
+                size += len(chunk)
+                if size > MAX_VIDEO_BYTES:
+                    raise HTTPException(status_code=413, detail="Video vượt quá giới hạn 95 MB")
+                output.write(chunk)
+        if size == 0:
+            raise HTTPException(status_code=422, detail="Video tải lên đang trống")
+
+        return _replace_demo_source(request, target.as_posix())
+    except HTTPException:
+        target.unlink(missing_ok=True)
+        raise
+    except Exception:
+        target.unlink(missing_ok=True)
+        raise
+    finally:
+        await video.close()
 
 
 @router.get("/{camera_id}")
@@ -40,70 +102,10 @@ async def get_camera(camera_id: str, request: Request):
         raise HTTPException(status_code=404, detail="Không tìm thấy camera") from exc
 
 
-@router.patch("/{camera_id}/source")
-async def update_camera_source(camera_id: str, source: CameraSourceUpdate, request: Request):
-    try:
-        camera_service.update_source(camera_id, source.source_kind, source.source_uri, source.playback_path)
-        request.app.state.local_runtime.restart_camera_if_enabled(camera_id)
-        runtime = request.app.state.local_runtime
-        return camera_service.get_camera(camera_id, runtime.camera, runtime.vision, runtime.frame_hub)
-    except CameraNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Không tìm thấy camera") from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-
-@router.patch("/{camera_id}")
-async def update_camera(camera_id: str, data: CameraUpdate, request: Request):
-    runtime = request.app.state.local_runtime
-    try:
-        old_public_id = camera_service.public_id(camera_id)
-        desired = next(item for item in camera_service.desired_states() if item["id"] == old_public_id)
-        camera_service.update_details(
-            camera_id,
-            name=data.name,
-            location=data.location,
-            source_kind=data.source_kind,
-            source_uri=data.source_uri,
-            playback_path=data.playback_path,
-        )
-        if runtime.camera.is_running(old_public_id):
-            runtime.camera.stop(old_public_id)
-        runtime.vision.disable(old_public_id)
-        if desired["camera_enabled"]:
-            runtime.start_persisted_camera(camera_id, desired["loop_video"])
-        if desired["vision_enabled"]:
-            runtime.vision.enable(camera_service.public_id(camera_id))
-        return camera_service.get_camera(camera_id, runtime.camera, runtime.vision, runtime.frame_hub)
-    except CameraNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Không tìm thấy camera") from exc
-    except CameraConflictError as exc:
-        raise HTTPException(status_code=409, detail="Tên camera đã tồn tại") from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-
-@router.delete("/{camera_id}", status_code=204)
-async def delete_camera(camera_id: str, request: Request):
-    runtime = request.app.state.local_runtime
-    try:
-        public_id = camera_service.public_id(camera_id)
-        if runtime.camera.is_running(public_id):
-            raise CameraConflictError("active_camera")
-        runtime.vision.disable(public_id)
-        camera_service.delete_inactive(camera_id)
-        return Response(status_code=204)
-    except CameraNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Không tìm thấy camera") from exc
-    except CameraConflictError as exc:
-        detail = "Hãy tắt camera trong Cài đặt trước khi xóa"
-        if str(exc) == "camera_has_history":
-            detail = "Camera còn dữ liệu lịch sử nên chưa thể xóa"
-        raise HTTPException(status_code=409, detail=detail) from exc
-
-
 @router.post("/{camera_id}/start", status_code=202)
-async def start_camera(camera_id: str, request: Request, loop_video: bool = True):
+async def start_camera(
+    camera_id: str, request: Request, loop_video: bool = True, _admin: dict = Depends(require_admin)
+):
     try:
         camera_service.set_camera_enabled(camera_id, True)
         return request.app.state.local_runtime.start_persisted_camera(camera_id, loop_video)
@@ -116,7 +118,7 @@ async def start_camera(camera_id: str, request: Request, loop_video: bool = True
 
 
 @router.post("/{camera_id}/stop")
-async def stop_camera(camera_id: str, request: Request):
+async def stop_camera(camera_id: str, request: Request, _admin: dict = Depends(require_admin)):
     try:
         return request.app.state.local_runtime.set_camera_enabled(camera_id, False)
     except CameraNotFoundError as exc:
@@ -124,7 +126,7 @@ async def stop_camera(camera_id: str, request: Request):
 
 
 @router.post("/{camera_id}/vision/enable")
-async def enable_camera_vision(camera_id: str, request: Request):
+async def enable_camera_vision(camera_id: str, request: Request, _admin: dict = Depends(require_admin)):
     try:
         public_id = camera_service.public_id(camera_id)
     except CameraNotFoundError as exc:
@@ -133,7 +135,7 @@ async def enable_camera_vision(camera_id: str, request: Request):
 
 
 @router.post("/{camera_id}/vision/disable")
-async def disable_camera_vision(camera_id: str, request: Request):
+async def disable_camera_vision(camera_id: str, request: Request, _admin: dict = Depends(require_admin)):
     try:
         public_id = camera_service.public_id(camera_id)
     except CameraNotFoundError as exc:
@@ -151,7 +153,9 @@ async def get_camera_vision_status(camera_id: str, request: Request):
 
 
 @router.patch("/{camera_id}/vision/identity")
-async def set_camera_identity(camera_id: str, data: IdentityUpdate, request: Request):
+async def set_camera_identity(
+    camera_id: str, data: IdentityUpdate, request: Request, _admin: dict = Depends(require_admin)
+):
     try:
         public_id = camera_service.public_id(camera_id)
     except CameraNotFoundError as exc:

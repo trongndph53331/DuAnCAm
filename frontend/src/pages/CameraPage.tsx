@@ -1,31 +1,29 @@
 import {
   AlertTriangle,
   Box,
-  Camera,
   CameraOff,
   Check,
-  ChevronLeft,
   ChevronRight,
-  Edit3,
   Expand,
   Minimize,
   RefreshCw,
   ShieldCheck,
-  Trash2,
+  Upload,
   UserSearch,
   Video,
   Wifi,
-  X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  deleteCamera,
   getCamera,
   getCameras,
+  getDemoScenarios,
+  selectDemoScenario,
   setCameraIdentity,
-  updateCamera,
+  uploadDemoVideo,
   type CameraDto,
   type CameraEventDto,
+  type DemoScenarioDto,
 } from "../api/cameras";
 import { CameraStream } from "../components";
 import "./cameraViewer.css";
@@ -40,11 +38,11 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
   const [events, setEvents] = useState<CameraEventDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [scenarios, setScenarios] = useState<DemoScenarioDto[]>([]);
+  const [scenarioId, setScenarioId] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
-  const selectorRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
   const camerasRequestInFlight = useRef(false);
   const [showBoxes, setShowBoxes] = useState(
@@ -75,6 +73,7 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
   };
   useEffect(() => {
     void load();
+    void getDemoScenarios().then(setScenarios).catch(() => setScenarios([]));
   }, []);
   useEffect(() => {
     const sync = () => void load();
@@ -137,11 +136,6 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
     window.history.pushState({}, "", path);
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
-  const moveCarousel = (direction: -1 | 1) =>
-    selectorRef.current?.scrollBy({
-      left: direction * 220,
-      behavior: "smooth",
-    });
   const toggleFullscreen = () =>
     void (document.fullscreenElement
       ? document.exitFullscreen()
@@ -163,46 +157,31 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
       setIdentitySaving(false);
     }
   };
-  const saveCamera = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!selected || saving) return;
+  const changeScenario = async () => {
+    if (!scenarioId || saving) return;
     setActionError("");
     setSaving(true);
-    const form = new FormData(event.currentTarget);
-    const source_kind = String(
-      form.get("source_kind"),
-    ) as CameraDto["source_kind"];
-    const source_uri = String(form.get("source_uri") || "").trim();
-    const playback_path = source_kind === "video_file" ? source_uri : undefined;
     try {
-      await updateCamera(selected.id, {
-        name: String(form.get("name")),
-        location: String(form.get("location")),
-        source_kind,
-        source_uri,
-        playback_path,
-      });
+      await selectDemoScenario(scenarioId);
       await load();
-      setEditing(false);
-    } catch (saveError) {
-      console.error("Không thể lưu camera", saveError);
-      setActionError("Không thể lưu camera. Kiểm tra tên và nguồn phát.");
+    } catch (reason) {
+      setActionError(reason instanceof Error ? reason.message : "Không thể đổi kịch bản demo.");
     } finally {
       setSaving(false);
     }
   };
-  const removeCamera = async () => {
-    if (!selected || selected.active) return;
+  const uploadVideo = async (file?: File) => {
+    if (!file || saving) return;
     setActionError("");
+    setSaving(true);
     try {
-      await deleteCamera(selected.id);
-      setEditing(false);
-      setSelectedId("");
-      load();
-    } catch {
-      setActionError(
-        "Không thể xóa camera. Camera phải được tắt trong Cài đặt và không còn lịch sử liên quan.",
-      );
+      await uploadDemoVideo(file);
+      setScenarioId("");
+      await load();
+    } catch (reason) {
+      setActionError(reason instanceof Error ? reason.message : "Không thể tải video lên.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -316,7 +295,7 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
                   />{" "}
                   Hiện khung
                 </label>
-                <label title="Bật phát hiện người lạ">
+                {isAdmin && <label title="Bật phát hiện người lạ">
                   <input
                     type="checkbox"
                     checked={recognitionEnabled}
@@ -326,7 +305,7 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
                     }
                   />{" "}
                   Phát hiện người lạ
-                </label>
+                </label>}
                 <button
                   className="camera-fullscreen-button"
                   onClick={toggleFullscreen}
@@ -370,7 +349,7 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
             <span>Hiện khung</span>
             {showBoxes ? <Check /> : <i aria-hidden="true" />}
           </button>
-          <button
+          {isAdmin && <button
             type="button"
             className={recognitionEnabled ? "active" : ""}
             aria-pressed={recognitionEnabled}
@@ -388,55 +367,38 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
             ) : (
               <i aria-hidden="true" />
             )}
-          </button>
+          </button>}
         </div>
-        <div className="camera-viewer-meta-actions">
-          <button
-            className="camera-detail-button"
-            onClick={() => setEditing(true)}
-          >
-            <Edit3 /> Chi tiết camera
-          </button>
-        </div>
-
-        <div className="camera-selector-wrap">
-          <header>
-            <h2>Danh sách camera</h2>
+        {isAdmin && (
+          <section className="demo-scenario-panel" aria-labelledby="demo-scenario-title">
             <div>
-              <button
-                onClick={() => moveCarousel(-1)}
-                aria-label="Camera trước"
-              >
-                <ChevronLeft />
-              </button>
-              <button
-                onClick={() => moveCarousel(1)}
-                aria-label="Camera tiếp theo"
-              >
-                <ChevronRight />
-              </button>
+              <h2 id="demo-scenario-title">Chọn kịch bản demo</h2>
+              <p>Đổi video nguồn và khởi động lại luồng camera hiện tại.</p>
             </div>
-          </header>
-          <div className="camera-selector" ref={selectorRef}>
-            {feeds.map((feed) => (
-              <button
-                key={feed.id}
-                className={feed.id === selected.id ? "active" : ""}
-                aria-pressed={feed.id === selected.id}
-                onClick={() => setSelectedId(feed.id)}
-              >
-                <VideoThumbnail feed={feed} showBoxes={showBoxes} />
-                <span className="thumbnail-camera-info">
-                  <strong>{feed.location || "Chưa đặt vị trí"}</strong>
-                  <small>
-                    <i className={feed.status !== "online" ? "offline" : ""} />
-                    {cameraStatusLabel(feed.status)}
-                  </small>
-                </span>
+            <div className="demo-scenario-actions">
+              <select value={scenarioId} onChange={(event) => setScenarioId(event.target.value)} disabled={saving}>
+                <option value="">Chọn một kịch bản…</option>
+                {scenarios.map((scenario) => <option value={scenario.id} key={scenario.id}>{scenario.name}</option>)}
+              </select>
+              <button type="button" disabled={!scenarioId || saving} onClick={() => void changeScenario()}>
+                {saving ? <RefreshCw className="spin" /> : <Video />} Áp dụng
               </button>
-            ))}
-          </div>
-        </div>
+              <label className="demo-upload-button">
+                <Upload /> Tải video lên
+                <input
+                  type="file"
+                  accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
+                  disabled={saving}
+                  onChange={(event) => {
+                    void uploadVideo(event.target.files?.[0]);
+                    event.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+            {actionError && <p className="camera-edit-error" role="alert">{actionError}</p>}
+          </section>
+        )}
 
         <section className="smart-camera-actions">
           <div className="camera-readonly-state">
@@ -493,92 +455,6 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
           </div>
         </section>
       </div>
-      {editing && (
-        <div className="camera-edit-backdrop">
-          <form className="camera-edit-modal" onSubmit={saveCamera}>
-            <header>
-              <div>
-                <h2>Chi tiết camera</h2>
-                <p>Thay đổi được lưu trong SQLite.</p>
-              </div>
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => setEditing(false)}
-              >
-                <X />
-              </button>
-            </header>
-            {actionError && <p className="camera-edit-error">{actionError}</p>}
-            <label>
-              <span>Tên camera</span>
-              <input
-                name="name"
-                defaultValue={selected.name}
-                required
-                maxLength={255}
-              />
-            </label>
-            <label>
-              <span>Vị trí</span>
-              <input
-                name="location"
-                defaultValue={selected.location}
-                required
-                maxLength={255}
-              />
-            </label>
-            <label>
-              <span>Loại nguồn</span>
-              <select name="source_kind" defaultValue={selected.source_kind}>
-                <option value="video_file">Video file</option>
-                <option value="webcam">Webcam</option>
-                <option value="rtsp">RTSP</option>
-              </select>
-            </label>
-            <label>
-              <span>Nguồn phát</span>
-              <input
-                name="source_uri"
-                defaultValue={editableSource(selected)}
-                placeholder={
-                  selected.source_kind === "rtsp"
-                    ? "rtsp://…"
-                    : "Đường dẫn video hoặc webcam index"
-                }
-                required
-              />
-            </label>
-            <footer>
-              {isAdmin && (
-                <button
-                  type="button"
-                  className="camera-delete"
-                  disabled={selected.active || saving}
-                  onClick={() => void removeCamera()}
-                >
-                  <Trash2 /> Xóa camera
-                </button>
-              )}
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => setEditing(false)}
-              >
-                Hủy
-              </button>
-              <button type="submit" disabled={saving}>
-                {saving ? "Đang lưu…" : "Lưu thay đổi"}
-              </button>
-            </footer>
-            {isAdmin && selected.active && (
-              <small className="camera-delete-note">
-                Muốn xóa, hãy tắt camera trong Cài đặt trước.
-              </small>
-            )}
-          </form>
-        </div>
-      )}
     </section>
   );
 }
@@ -628,50 +504,6 @@ function visionStatusLabel(status: CameraDto["vision_status"]): string {
   if (status === "waiting_for_source") return "Đang chờ nguồn";
   if (status === "error") return "Có lỗi";
   return "Đã tắt";
-}
-
-function VideoThumbnail({
-  feed,
-  showBoxes,
-}: {
-  feed: CameraDto;
-  showBoxes: boolean;
-}) {
-  const [failed, setFailed] = useState(false);
-  return (
-    <span
-      className={`video-thumbnail ${feed.status !== "online" ? "offline" : ""}`}
-    >
-      {feed.stream_ready && !failed ? (
-        <CameraStream
-          cameraId={feed.id}
-          streamReady
-          streamUrl={feed.stream_url}
-          showBoxes={showBoxes}
-          showIdentity={feed.identity_enabled}
-          onError={() => setFailed(true)}
-        />
-      ) : (
-        <span className="camera-source-placeholder">
-          <Camera />
-        </span>
-      )}
-      <span
-        className={`thumbnail-status ${feed.status !== "online" ? "offline" : ""}`}
-      >
-        <i />
-        {cameraStatusLabel(feed.status)}
-      </span>
-      <span className="thumbnail-name">{feed.name}</span>
-    </span>
-  );
-}
-
-function editableSource(camera: CameraDto): string {
-  if (camera.source_kind === "rtsp") return "";
-  if (camera.source_kind === "webcam")
-    return camera.source.replace(/^Webcam\s*/i, "");
-  return camera.source;
 }
 
 function isToday(value: string): boolean {

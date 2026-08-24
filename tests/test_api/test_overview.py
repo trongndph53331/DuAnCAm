@@ -3,6 +3,7 @@ from uuid import uuid4
 
 import pytest
 
+from src.database import BUILTIN_VIDEO_CAMERA_ID
 from src.models.schemas import VisionEventRequest
 from src.services.event_service import event_service
 
@@ -27,12 +28,13 @@ async def test_overview_uses_sqlite_camera_and_alert_data(client):
     assert response.status_code == 200
     data = response.json()
     assert data["system_status"] == "attention"
-    assert data["metrics"]["total_cameras"] >= 1
+    assert data["metrics"]["total_cameras"] == 1
     assert data["metrics"]["events_today"] >= 1
     assert data["current_alert"]["id"] == accepted.id
-    living_camera = next(camera for camera in data["cameras"] if camera["id"] == "camera-living")
-    assert living_camera["playback_url"].startswith("/videos/")
-    assert living_camera["preview_url"] is None
-    assert "preview_version" in living_camera
-    assert "vision_enabled" in living_camera
-    assert "vision_status" in living_camera
+    assert [camera["id"] for camera in data["cameras"]] == [BUILTIN_VIDEO_CAMERA_ID]
+    demo_camera = data["cameras"][0]
+    assert demo_camera["playback_url"].startswith("/videos/")
+    assert demo_camera["preview_url"] is None
+    assert "preview_version" in demo_camera
+    assert "vision_enabled" in demo_camera
+    assert "vision_status" in demo_camera

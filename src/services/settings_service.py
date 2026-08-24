@@ -34,7 +34,8 @@ class SettingsService:
                 """SELECT c.id, c.name, c.location_label, c.operational_status, c.last_seen_at,
                           c.is_active, c.vision_enabled,
                           COALESCE(cs.source_kind, c.source_type) AS source_kind
-                   FROM cameras c LEFT JOIN camera_sources cs ON cs.camera_id = c.id ORDER BY c.name"""
+                   FROM cameras c LEFT JOIN camera_sources cs ON cs.camera_id = c.id
+                   WHERE c.is_archived = 0 ORDER BY c.name"""
             ).fetchall()
             camera_items = []
             for camera in cameras:

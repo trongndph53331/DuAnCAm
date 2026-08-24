@@ -26,13 +26,14 @@ class CameraService:
 
     def list_cameras(self, runtime=None, vision=None, frame_hub=None) -> list[dict[str, Any]]:
         with database_connection() as connection:
-            rows = connection.execute(self._camera_query() + " ORDER BY c.name").fetchall()
+            rows = connection.execute(self._camera_query() + " WHERE c.is_archived = 0 ORDER BY c.name").fetchall()
             return [self._camera(row, runtime, vision, frame_hub) for row in rows]
 
     def get_camera(self, camera_id: str, runtime=None, vision=None, frame_hub=None) -> dict[str, Any]:
         with database_connection() as connection:
             row = connection.execute(
-                self._camera_query() + " WHERE c.id = ? OR c.name = ?", (camera_id, camera_id)
+                self._camera_query() + " WHERE c.is_archived = 0 AND (c.id = ? OR c.name = ?)",
+                (camera_id, camera_id),
             ).fetchone()
             if not row:
                 raise CameraNotFoundError(camera_id)
@@ -60,11 +61,19 @@ class CameraService:
         if kind == "rtsp":
             return public_id, source_uri
 
-        relative = Path(source_uri.replace("/", str(Path("/"))))
+        return public_id, self.resolve_video_path(source_uri)
+
+    @staticmethod
+    def resolve_video_path(source_uri: str) -> str:
+        """Resolve a safe relative demo/upload path to an existing local file."""
+        path = PurePosixPath(source_uri.replace("\\", "/"))
+        if path.is_absolute() or ".." in path.parts:
+            raise ValueError("Video path must be relative and cannot contain '..'")
+        relative = Path(*path.parts)
         candidates = [Path.cwd() / relative, Path.cwd() / "frontend" / "public" / relative]
         for candidate in candidates:
             if candidate.is_file():
-                return public_id, str(candidate.resolve())
+                return str(candidate.resolve())
         raise ValueError(f"Video source does not exist: {source_uri}")
 
     def public_id(self, camera_id: str) -> str:
@@ -78,7 +87,9 @@ class CameraService:
 
     def desired_states(self) -> list[dict[str, Any]]:
         with database_connection() as connection:
-            rows = connection.execute(self._camera_query() + " ORDER BY c.created_at, c.id").fetchall()
+            rows = connection.execute(
+                self._camera_query() + " WHERE c.is_archived = 0 ORDER BY c.created_at, c.id"
+            ).fetchall()
             return [
                 {
                     "id": self._public_id(row),
@@ -135,19 +146,25 @@ class CameraService:
         self._validate_source(source_kind, source_uri, playback_path)
         with database_connection() as connection:
             row = connection.execute(
-                "SELECT id FROM cameras WHERE id = ? OR name = ?", (camera_id, camera_id)
+                """SELECT c.id, cs.config_json FROM cameras c
+                   LEFT JOIN camera_sources cs ON cs.camera_id = c.id
+                   WHERE c.is_archived = 0 AND (c.id = ? OR c.name = ?)""",
+                (camera_id, camera_id),
             ).fetchone()
             if not row:
                 raise CameraNotFoundError(camera_id)
+            config = self._config(row["config_json"])
+            config["loop_video"] = True
             connection.execute(
-                """INSERT INTO camera_sources (camera_id, source_kind, source_uri, playback_path)
-                   VALUES (?, ?, ?, ?)
+                """INSERT INTO camera_sources (camera_id, source_kind, source_uri, playback_path, config_json)
+                   VALUES (?, ?, ?, ?, ?)
                    ON CONFLICT(camera_id) DO UPDATE SET
                      source_kind = excluded.source_kind,
                      source_uri = excluded.source_uri,
                      playback_path = excluded.playback_path,
+                     config_json = excluded.config_json,
                      updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')""",
-                (row["id"], source_kind, source_uri, playback_path),
+                (row["id"], source_kind, source_uri, playback_path, json.dumps(config)),
             )
         return self.get_camera(camera_id)
 
@@ -188,26 +205,6 @@ class CameraService:
             if "UNIQUE constraint failed: cameras.name" in str(exc):
                 raise CameraConflictError(name) from exc
             raise
-
-    def delete_inactive(self, camera_id: str) -> None:
-        with database_connection() as connection:
-            row = connection.execute(
-                "SELECT id, is_active FROM cameras WHERE id = ? OR name = ?", (camera_id, camera_id)
-            ).fetchone()
-            if not row:
-                raise CameraNotFoundError(camera_id)
-            if row["is_active"]:
-                raise CameraConflictError("active_camera")
-            if connection.execute("SELECT 1 FROM events WHERE camera_id = ? LIMIT 1", (row["id"],)).fetchone():
-                raise CameraConflictError("camera_has_history")
-            try:
-                connection.execute("DELETE FROM inference_metrics WHERE camera_id = ?", (row["id"],))
-                connection.execute("DELETE FROM frame_metrics WHERE camera_id = ?", (row["id"],))
-                connection.execute("DELETE FROM cameras WHERE id = ?", (row["id"],))
-            except Exception as exc:
-                if "FOREIGN KEY constraint failed" in str(exc):
-                    raise CameraConflictError("camera_has_history") from exc
-                raise
 
     @staticmethod
     def _camera_query() -> str:

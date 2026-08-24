@@ -29,7 +29,7 @@ export function answerAntamQuestion(input:string,intent=classifyAntamIntent(inpu
   if(intent==="settings")return "Bạn có thể mở Cài đặt để thay đổi thiết lập camera và cảnh báo.";
   if(intent==="feature_explanation")return "Dashboard tóm tắt trạng thái ngôi nhà; Camera hiển thị hình ảnh; Cảnh báo là tình huống cần kiểm tra; Lịch sử lưu các sự kiện đã ghi nhận.";
   if(intent==="system_help"){
-    if(/thêm camera/.test(text))return "Bước 1. Mở Cài đặt.\nBước 2. Chọn Camera.\nBước 3. Nhấn Thêm camera và làm theo hướng dẫn.";
+    if(/thêm camera/.test(text))return "An Tâm Home đang ở chế độ demo một camera nên không hỗ trợ thêm camera.";
     if(/thêm người thân/.test(text))return "Bước 1. Mở Người thân.\nBước 2. Chọn Thêm người thân.\nBước 3. Nhập thông tin và lưu.";
     return "Hãy mở đúng mục trên thanh điều hướng, sau đó chọn thao tác bạn muốn thực hiện.";
   }

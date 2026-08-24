@@ -2,9 +2,19 @@ import json
 
 import pytest
 
+from src.api.auth import require_admin
 from src.database import database_connection
 from src.main import app
 from src.services.camera_service import camera_service
+
+
+@pytest.fixture(autouse=True)
+def admin_camera_api():
+    app.dependency_overrides[require_admin] = lambda: {"role": "admin", "force_password_change": False}
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(require_admin, None)
 
 
 @pytest.mark.asyncio
