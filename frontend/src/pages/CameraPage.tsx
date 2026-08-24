@@ -47,6 +47,7 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
   const [scenarioId, setScenarioId] = useState("");
   const [scenarioName, setScenarioName] = useState("");
   const [pendingUpload, setPendingUpload] = useState<PendingDemoUploadDto | null>(null);
+  const [streamRevision, setStreamRevision] = useState(() => Date.now());
   const [fullscreen, setFullscreen] = useState(false);
   const viewerRef = useRef<HTMLDivElement>(null);
   const camerasRequestInFlight = useRef(false);
@@ -168,6 +169,7 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
     setSaving(true);
     try {
       await selectDemoScenario(scenarioId);
+      setStreamRevision(Date.now());
       await load();
     } catch (reason) {
       setActionError(reason instanceof Error ? reason.message : "Không thể đổi kịch bản demo.");
@@ -200,6 +202,7 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
       setScenarioId(result.scenario.id);
       setPendingUpload(null);
       setScenarioName("");
+      setStreamRevision(Date.now());
       await load();
     } catch (reason) {
       setActionError(reason instanceof Error ? reason.message : "Không thể lưu tên kịch bản.");
@@ -260,11 +263,13 @@ export default function CameraPage({ isAdmin }: { isAdmin: boolean }) {
             ref={viewerRef}
           >
             <CameraStream
+              key={`${selected.id}-${streamRevision}`}
               cameraId={selected.id}
               streamReady={selected.stream_ready}
               streamUrl={selected.stream_url}
               showBoxes={showBoxes}
               showIdentity={recognitionEnabled}
+              streamRevision={streamRevision}
             />
             {selected.status === "connecting" ||
             (selected.status === "online" && !selected.stream_ready) ? (
