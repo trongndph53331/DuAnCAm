@@ -1,5 +1,12 @@
+const deployedApiBaseUrl =
+  typeof window !== "undefined" &&
+  (window.location.hostname === "app.antamonline.website" ||
+    window.location.hostname.endsWith(".pages.dev"))
+    ? "https://antamonline.website/api/v1"
+    : "/api/v1";
+
 export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
+  import.meta.env.VITE_API_BASE_URL ?? deployedApiBaseUrl;
 
 let authToken = localStorage.getItem("antam_token") ?? sessionStorage.getItem("antam_token");
 
