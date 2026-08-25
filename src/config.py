@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     app_host: str = "0.0.0.0"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     cors_origins: str = "http://localhost:3000"
+    demo_login_enabled: bool = False
 
     api_base_url: str = "http://localhost:8000"
     metrics_collection_enabled: bool = True

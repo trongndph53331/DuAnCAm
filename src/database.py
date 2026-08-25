@@ -314,8 +314,24 @@ def _apply_runtime_migrations(connection: sqlite3.Connection) -> None:
         """INSERT OR IGNORE INTO users (id, email, display_name, role, is_active)
            VALUES ('11111111-1111-4111-8111-111111111111', 'admin@example.local', 'Quản trị viên', 'admin', 1)"""
     )
+    connection.execute(
+        """INSERT OR IGNORE INTO users
+           (id, email, display_name, role, is_active, force_password_change)
+           VALUES ('33333333-3333-4333-8333-333333333333',
+                   'admin.demo@example.local', 'Quản trị viên Demo',
+                   'admin', 1, 0)"""
+    )
+    connection.execute(
+        """INSERT OR IGNORE INTO users
+           (id, email, display_name, role, is_active, force_password_change)
+           VALUES ('22222222-2222-4222-8222-222222222222',
+                   'caregiver.demo@example.local', 'Người chăm sóc Demo',
+                   'caregiver', 1, 0)"""
+    )
     missing_admins = connection.execute(
-        "SELECT id FROM users WHERE role = 'admin' AND password_hash IS NULL"
+        """SELECT id FROM users
+           WHERE role = 'admin' AND password_hash IS NULL
+             AND lower(email) != 'admin.demo@example.local'"""
     ).fetchall()
     if missing_admins:
         initial_password = os.getenv("ANTAM_INITIAL_ADMIN_PASSWORD", "AnTam@123")

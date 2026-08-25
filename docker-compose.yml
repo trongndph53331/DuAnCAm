@@ -15,7 +15,8 @@ services:
       APP_PORT: 8000
       DATABASE_URL: sqlite:///./data/app.db
       CHROMA_PERSIST_DIR: ./data/chroma
-      CORS_ORIGINS: http://localhost:${FRONTEND_PORT:-5173},https://app.antamonline.website,https://duancam.pages.dev
+      CORS_ORIGINS: http://localhost:${FRONTEND_PORT:-5173},https://c3-app-t227.antamonline.website,https://duancam.pages.dev
+      DEMO_LOGIN_ENABLED: ${DEMO_LOGIN_ENABLED:-true}
       VISION_ENGINE: sda
       VISION_DEVICE: cpu
       VISION_IDENTITY_ENABLED: ${VISION_IDENTITY_ENABLED:-false}

@@ -1,4 +1,4 @@
-import { apiClient, setAuthToken } from "./client";
+import { apiClient, apiCommand, setAuthToken } from "./client";
 import type { PermissionKey } from "./settings";
 
 export type AuthUser = {
@@ -20,6 +20,15 @@ export async function login(identity: string, password: string, remember: boolea
   return value.user;
 }
 
+export async function demoLogin(role: "admin" | "caregiver") {
+  const value = await apiClient<{ token: string; user: AuthUser }>("/auth/demo-login", {
+    method: "POST",
+    body: JSON.stringify({ role }),
+  });
+  setAuthToken(value.token, false);
+  return value.user;
+}
+
 export const me = () => apiClient<AuthUser>("/auth/me");
 export const changePassword = (password: string) => apiClient<AuthUser>("/auth/change-password", {
   method: "POST",
@@ -27,7 +36,7 @@ export const changePassword = (password: string) => apiClient<AuthUser>("/auth/c
 });
 export async function logout() {
   try {
-    await apiClient("/auth/logout", { method: "POST" });
+    await apiCommand("/auth/logout", { method: "POST" });
   } finally {
     setAuthToken(null, false);
   }

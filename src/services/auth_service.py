@@ -53,11 +53,30 @@ class AuthService:
                 raise AuthenticationError
             if not user["is_active"]:
                 raise InactiveAccountError
-            token = secrets.token_urlsafe(48)
-            expires = datetime.now(UTC) + timedelta(days=30 if remember else 1)
-            with self._lock:
-                self._sessions[token] = (user["id"], expires)
-            return token, self._serialize(connection, user)
+            return self._create_session(connection, user, remember)
+
+    def demo_login(self, role: str) -> tuple[str, dict]:
+        demo_email = {
+            "admin": "admin.demo@example.local",
+            "caregiver": "caregiver.demo@example.local",
+        }.get(role)
+        if demo_email is None:
+            raise AuthenticationError
+        with database_connection() as connection:
+            user = connection.execute(
+                "SELECT * FROM users WHERE lower(email) = lower(?) AND is_active = 1",
+                (demo_email,),
+            ).fetchone()
+            if not user:
+                raise AuthenticationError
+            return self._create_session(connection, user, False)
+
+    def _create_session(self, connection, user, remember: bool) -> tuple[str, dict]:
+        token = secrets.token_urlsafe(48)
+        expires = datetime.now(UTC) + timedelta(days=30 if remember else 1)
+        with self._lock:
+            self._sessions[token] = (user["id"], expires)
+        return token, self._serialize(connection, user)
 
     def authenticate(self, token: str | None) -> dict:
         if not token:

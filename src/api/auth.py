@@ -1,6 +1,9 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 
+from src.config import get_settings
 from src.permissions import PERMISSION_DENIED_DETAIL, PERMISSIONS
 from src.services.auth_service import AuthenticationError, InactiveAccountError, auth_service
 
@@ -53,6 +56,10 @@ class PasswordChange(BaseModel):
     password: str = Field(min_length=8, max_length=128)
 
 
+class DemoLoginRequest(BaseModel):
+    role: Literal["admin", "caregiver"]
+
+
 @router.post("/login")
 async def login(data: LoginRequest):
     try:
@@ -62,6 +69,17 @@ async def login(data: LoginRequest):
         raise HTTPException(403, "Tài khoản đã bị vô hiệu hoá") from exc
     except AuthenticationError as exc:
         raise HTTPException(401, "Email hoặc mật khẩu không đúng") from exc
+
+
+@router.post("/demo-login")
+async def demo_login(data: DemoLoginRequest):
+    if not get_settings().demo_login_enabled:
+        raise HTTPException(404, "Chế độ đăng nhập demo chưa được bật")
+    try:
+        token, user = auth_service.demo_login(data.role)
+        return {"token": token, "user": user}
+    except AuthenticationError as exc:
+        raise HTTPException(503, "Tài khoản demo chưa sẵn sàng") from exc
 
 
 @router.get("/me")

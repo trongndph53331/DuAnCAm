@@ -1,6 +1,6 @@
 const deployedApiBaseUrl =
   typeof window !== "undefined" &&
-  (window.location.hostname === "app.antamonline.website" ||
+  (window.location.hostname === "c3-app-t227.antamonline.website" ||
     window.location.hostname.endsWith(".pages.dev"))
     ? "https://antamonline.website/api/v1"
     : "/api/v1";
